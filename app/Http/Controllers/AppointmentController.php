@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use App\Services\WhatsAppSender;
 use App\Mail\AppointmentConfirmation;
 use Illuminate\Support\Facades\Mail;
+use App\Services\ActivityLogger;
 
 class AppointmentController extends Controller
 {
@@ -116,6 +117,16 @@ class AppointmentController extends Controller
             // ignore
         }
 
+        // Log the public booking
+        ActivityLogger::log(
+            'booked',
+            'Appointment',
+            $appointment->id,
+            'Public booking by ' . $data['patient_name'] . ' for ' . $service->name,
+            null,
+            $appointment->toArray()
+        );
+
         // For testing/API consistency, redirect to visit status page
         return redirect()->to('/visit/' . $appointment->visit_token)
             ->with('success', 'Appointment booked successfully!')
@@ -216,6 +227,16 @@ class AppointmentController extends Controller
         }
 
         $this->assignQueueAndRoom($appointment);
+
+        // Log the check-in
+        ActivityLogger::log(
+            'checked_in',
+            'Appointment',
+            $appointment->id,
+            'Patient ' . $appointment->patient_name . ' checked in via public portal',
+            ['status' => $appointment->getOriginal('status')],
+            ['status' => 'arrived', 'check_in_time' => now()]
+        );
 
         return redirect()->to('/track/' . $appointment->visit_code)
             ->with('status', 'Checked in successfully.');

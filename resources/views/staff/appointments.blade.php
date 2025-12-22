@@ -81,6 +81,55 @@
     </li>
 </ul>
 
+<!-- Filter Section -->
+<div class="card mb-3 bg-light border-0">
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold mb-2">
+                    <i class="bi bi-funnel me-2"></i>Filter by Status
+                </label>
+                <select id="statusFilter" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    @foreach($availableStatuses as $status => $label)
+                        <option value="{{ $status }}" {{ $statusFilter === $status ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold mb-2">
+                    <i class="bi bi-calendar me-2"></i>Date Range
+                </label>
+                <select id="dateFilter" class="form-select form-select-sm">
+                    <option value="today" {{ $dateFilter === 'today' ? 'selected' : '' }}>Today</option>
+                    <option value="upcoming" {{ $dateFilter === 'upcoming' ? 'selected' : '' }}>Upcoming</option>
+                    <option value="past" {{ $dateFilter === 'past' ? 'selected' : '' }}>Past</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2">
+                    <button id="applyFilterBtn" class="btn btn-sm btn-primary flex-grow-1">
+                        <i class="bi bi-search me-1"></i>Apply Filter
+                    </button>
+                    <a href="/staff/appointments" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>Reset
+                    </a>
+                </div>
+            </div>
+        </div>
+        @if($statusFilter)
+            <div class="mt-2">
+                <span class="badge bg-primary">
+                    Active Filter: {{ $availableStatuses[$statusFilter] ?? $statusFilter }}
+                    <a href="/staff/appointments" class="text-white ms-2" style="cursor: pointer;">✕</a>
+                </span>
+            </div>
+        @endif
+    </div>
+</div>
+
 <div class="tab-content" id="apptTabsContent">
     <div class="tab-pane fade show active" id="today" role="tabpanel">
         <div class="card table-card">
@@ -502,6 +551,30 @@
         startAutoRefresh();
     });
 
+    // Filter functionality
+    document.getElementById('applyFilterBtn')?.addEventListener('click', function() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        
+        const params = new URLSearchParams();
+        if (statusFilter) {
+            params.append('status', statusFilter);
+        }
+        if (dateFilter && dateFilter !== 'today') {
+            params.append('date_filter', dateFilter);
+        }
+        
+        // Navigate with filters
+        window.location.href = '/staff/appointments' + (params.toString() ? '?' + params.toString() : '');
+    });
+
+    // Allow Enter key to apply filter
+    document.getElementById('statusFilter')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('applyFilterBtn').click();
+        }
+    });
+
     // Real-time updates - auto refresh every 5 seconds
     function startAutoRefresh() {
         setInterval(function() {
@@ -520,6 +593,11 @@
     tr.fade-out {
         opacity: 0;
         transition: opacity 0.8s ease-out;
+    }
+    
+    /* Filter card styling */
+    #applyFilterBtn {
+        font-size: 0.875rem;
     }
 </style>
 @endsection

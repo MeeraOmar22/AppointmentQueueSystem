@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\Queue;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogger;
 
 class CheckInService
 {
@@ -40,11 +41,14 @@ class CheckInService
             }
 
             // Log the check-in activity
-            activity()
-                ->causedBy(auth()->user() ?? null)
-                ->performedOn($appointment)
-                ->event('checked_in')
-                ->log('Patient ' . $appointment->patient_name . ' checked in');
+            ActivityLogger::log(
+                'checked_in',
+                'Appointment',
+                $appointment->id,
+                'Patient ' . $appointment->patient_name . ' checked in',
+                null,
+                ['queue_number' => $queue->queue_number, 'status' => 'waiting']
+            );
 
             return $queue;
         });

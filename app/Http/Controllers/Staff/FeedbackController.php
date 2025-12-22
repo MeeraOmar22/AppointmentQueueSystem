@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
+use App\Services\ActivityLogger;
 
 class FeedbackController extends Controller
 {
@@ -38,6 +39,17 @@ class FeedbackController extends Controller
     public function show($id)
     {
         $feedback = Feedback::with(['appointment.service', 'appointment.dentist'])->findOrFail($id);
+        
+        // Log feedback view
+        ActivityLogger::log(
+            'viewed',
+            'Feedback',
+            $feedback->id,
+            'Viewed feedback from ' . ($feedback->appointment->patient_name ?? 'Unknown patient'),
+            null,
+            null
+        );
+        
         return view('staff.feedback.show', compact('feedback'));
     }
 }

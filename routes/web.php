@@ -14,6 +14,7 @@ use App\Http\Controllers\Staff\PastController;
 use App\Http\Controllers\Staff\CalendarController;
 use App\Http\Controllers\Staff\DentistLeaveController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\Staff\FeedbackController as StaffFeedbackController;
@@ -27,6 +28,9 @@ Route::get('/', function () {
 });
 
 Auth::routes();
+
+// Authenticated home dashboard route used by login redirect
+Route::get('/home', [HomeController::class, 'index'])->name('home')->middleware('auth');
 
 
 Route::get('/', [PublicController::class, 'home']);

@@ -8,6 +8,7 @@ use App\Models\Dentist;
 use App\Models\Appointment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogger;
 
 class QueueAssignmentService
 {
@@ -56,10 +57,14 @@ class QueueAssignmentService
             $queue->appointment->update(['status' => 'in_queue']);
 
             // Log assignment
-            activity()
-                ->performedOn($queue->appointment)
-                ->event('queue_assigned')
-                ->log('Assigned to Room ' . $room->room_number . ' with Dr. ' . $dentist->name);
+            ActivityLogger::log(
+                'queue_assigned',
+                'Appointment',
+                $queue->appointment->id,
+                'Assigned to Room ' . $room->room_number . ' with Dr. ' . $dentist->name,
+                null,
+                ['room_id' => $room->id, 'dentist_id' => $dentist->id, 'queue_status' => 'called']
+            );
 
             return $queue;
         });
@@ -77,10 +82,14 @@ class QueueAssignmentService
             $queue->markInTreatment();
             $queue->appointment->markInTreatment();
 
-            activity()
-                ->performedOn($queue->appointment)
-                ->event('treatment_started')
-                ->log('Treatment started in Room ' . $queue->room?->room_number);
+            ActivityLogger::log(
+                'treatment_started',
+                'Appointment',
+                $queue->appointment->id,
+                'Treatment started in Room ' . $queue->room?->room_number,
+                ['status' => $queue->appointment->status],
+                ['status' => 'in_treatment', 'room' => $queue->room?->room_number]
+            );
         });
     }
 
@@ -96,10 +105,14 @@ class QueueAssignmentService
             $queue->markCompleted();
             $queue->appointment->markCompleted();
 
-            activity()
-                ->performedOn($queue->appointment)
-                ->event('treatment_completed')
-                ->log('Treatment completed');
+            ActivityLogger::log(
+                'treatment_completed',
+                'Appointment',
+                $queue->appointment->id,
+                'Treatment completed',
+                ['status' => 'in_treatment'],
+                ['status' => 'completed']
+            );
 
             // Try to assign next patient
             $this->assignNextPatient($queue->appointment->clinic_location);

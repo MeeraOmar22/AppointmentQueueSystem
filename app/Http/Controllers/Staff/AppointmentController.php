@@ -17,25 +17,51 @@ use App\Services\ActivityLogger;
 
 class AppointmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $today = Carbon::today();
-        $todayAppointments = Appointment::with(['service', 'queue', 'dentist'])
-            ->whereDate('appointment_date', $today)
+        
+        // Get filter parameters
+        $statusFilter = $request->query('status', null);
+        $dateFilter = $request->query('date_filter', 'today'); // today, upcoming, past
+        
+        // Today's appointments with optional status filter
+        $todayQuery = Appointment::with(['service', 'queue', 'dentist'])
+            ->whereDate('appointment_date', $today);
+        
+        if ($statusFilter) {
+            $todayQuery->where('status', $statusFilter);
+        }
+        
+        $todayAppointments = $todayQuery
             ->orderByRaw('CASE WHEN queues.queue_number IS NULL THEN 1 ELSE 0 END')
             ->leftJoin('queues', 'appointments.id', '=', 'queues.appointment_id')
             ->select('appointments.*')
             ->get();
 
-        $upcomingAppointments = Appointment::with(['service', 'dentist'])
-            ->whereDate('appointment_date', '>', $today)
+        // Upcoming appointments
+        $upcomingQuery = Appointment::with(['service', 'dentist'])
+            ->whereDate('appointment_date', '>', $today);
+        
+        if ($statusFilter) {
+            $upcomingQuery->where('status', $statusFilter);
+        }
+        
+        $upcomingAppointments = $upcomingQuery
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->limit(50)
             ->get();
 
-        $pastAppointments = Appointment::with(['service', 'dentist'])
-            ->whereDate('appointment_date', '<', $today)
+        // Past appointments
+        $pastQuery = Appointment::with(['service', 'dentist'])
+            ->whereDate('appointment_date', '<', $today);
+        
+        if ($statusFilter) {
+            $pastQuery->where('status', $statusFilter);
+        }
+        
+        $pastAppointments = $pastQuery
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->limit(50)
@@ -93,6 +119,18 @@ class AppointmentController extends Controller
             'completed' => $queueEntries->where('queue_status', 'completed')->count(),
         ];
 
+        // Get all available statuses for filter dropdown
+        $availableStatuses = [
+            'booked' => 'Booked',
+            'arrived' => 'Arrived',
+            'in_queue' => 'In Queue',
+            'in_treatment' => 'In Treatment',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+            'no_show' => 'No Show',
+            'late' => 'Late',
+        ];
+
         return view('staff.appointments', [
             'appointments' => $todayAppointments,
             'averageDurations' => $averageDurations,
@@ -101,6 +139,9 @@ class AppointmentController extends Controller
             'today' => $today,
             'upcomingAppointments' => $upcomingAppointments,
             'pastAppointments' => $pastAppointments,
+            'statusFilter' => $statusFilter,
+            'dateFilter' => $dateFilter,
+            'availableStatuses' => $availableStatuses,
         ]);
 
     }

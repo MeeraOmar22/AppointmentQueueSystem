@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogger;
 
 class RoomController extends Controller
 {
@@ -81,11 +82,14 @@ class RoomController extends Controller
         ]);
 
         // Log activity
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($room)
-            ->event('created')
-            ->log('Created new treatment room: ' . $room->room_number);
+        ActivityLogger::log(
+            'created',
+            'Room',
+            $room->id,
+            'Created new treatment room: ' . $room->room_number,
+            null,
+            $room->toArray()
+        );
 
         return redirect('/staff/rooms')
             ->with('success', 'Room created successfully. Room #' . $room->room_number . ' is now available.');
@@ -120,15 +124,14 @@ class RoomController extends Controller
         $room->update($validated);
 
         // Log activity
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($room)
-            ->event('updated')
-            ->withProperties([
-                'old' => $oldValues,
-                'new' => $room->only(['room_number', 'capacity', 'status']),
-            ])
-            ->log('Updated room: ' . $room->room_number);
+        ActivityLogger::log(
+            'updated',
+            'Room',
+            $room->id,
+            'Updated room: ' . $room->room_number,
+            $oldValues,
+            $room->fresh()->toArray()
+        );
 
         return redirect('/staff/rooms')
             ->with('success', 'Room updated successfully.');
@@ -152,10 +155,14 @@ class RoomController extends Controller
         $room->delete();
 
         // Log activity
-        activity()
-            ->causedBy(auth()->user())
-            ->event('deleted')
-            ->log('Deleted treatment room: ' . $roomNumber);
+        ActivityLogger::log(
+            'deleted',
+            'Room',
+            null,
+            'Deleted treatment room: ' . $roomNumber,
+            ['room_number' => $roomNumber],
+            null
+        );
 
         return redirect('/staff/rooms')
             ->with('success', 'Room deleted successfully.');
@@ -185,11 +192,14 @@ class RoomController extends Controller
                 if ($room->status !== $validated['status']) {
                     $room->update(['status' => $validated['status']]);
 
-                    activity()
-                        ->causedBy(auth()->user())
-                        ->performedOn($room)
-                        ->event('updated')
-                        ->log('Room status changed to: ' . $validated['status']);
+                    ActivityLogger::log(
+                        'updated',
+                        'Room',
+                        $room->id,
+                        'Room status changed to: ' . $validated['status'],
+                        ['status' => $room->getOriginal('status')],
+                        ['status' => $validated['status']]
+                    );
                 }
             }
         });

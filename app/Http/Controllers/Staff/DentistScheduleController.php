@@ -9,6 +9,8 @@ use App\Models\DentistLeave;
 use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Services\ActivityLogger;
+use App\Services\ActivityLogger;
 
 class DentistScheduleController extends Controller
 {
@@ -185,6 +187,8 @@ class DentistScheduleController extends Controller
             'end_time' => 'nullable|date_format:H:i|after:start_time',
         ]);
 
+        $oldValues = $dentistSchedule->toArray();
+        
         $isAvailable = $request->boolean('is_available', false);
         $data['is_available'] = $isAvailable;
 
@@ -194,6 +198,17 @@ class DentistScheduleController extends Controller
         }
 
         $dentistSchedule->update($data);
+        
+        // Log activity
+        $dentist = $dentistSchedule->dentist;
+        ActivityLogger::log(
+            'updated',
+            'DentistSchedule',
+            $dentistSchedule->id,
+            'Updated schedule for Dr. ' . ($dentist->name ?? 'Unknown') . ' on ' . $dentistSchedule->day_of_week,
+            $oldValues,
+            $dentistSchedule->fresh()->toArray()
+        );
 
         return back()->with('success', 'Schedule updated');
     }

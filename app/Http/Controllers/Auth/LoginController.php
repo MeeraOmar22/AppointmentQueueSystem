@@ -25,7 +25,15 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/staff/appointments';
+
+    /**
+     * Redirect all users to staff appointments after login.
+     */
+    protected function redirectTo()
+    {
+        return '/staff/appointments';
+    }
 
     /**
      * Create a new controller instance.

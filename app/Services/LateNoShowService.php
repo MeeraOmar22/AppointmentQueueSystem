@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Queue;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogger;
 
 class LateNoShowService
 {
@@ -33,10 +34,14 @@ class LateNoShowService
                 $appointment->markLate();
                 $marked++;
 
-                activity()
-                    ->performedOn($appointment)
-                    ->event('marked_late')
-                    ->log('Appointment marked as late (no check-in after ' . $latenessThresholdMinutes . ' minutes)');
+                ActivityLogger::log(
+                    'marked_late',
+                    'Appointment',
+                    $appointment->id,
+                    'Appointment marked as late (no check-in after ' . $latenessThresholdMinutes . ' minutes)',
+                    ['status' => 'booked'],
+                    ['status' => 'late']
+                );
             }
         }
 
@@ -72,10 +77,14 @@ class LateNoShowService
                     $appointment->queue->update(['queue_status' => 'completed']);
                 }
 
-                activity()
-                    ->performedOn($appointment)
-                    ->event('marked_no_show')
-                    ->log('Appointment marked as no-show');
+                ActivityLogger::log(
+                    'marked_no_show',
+                    'Appointment',
+                    $appointment->id,
+                    'Appointment marked as no-show',
+                    ['status' => $appointment->status],
+                    ['status' => 'no_show']
+                );
             }
         }
 
@@ -119,10 +128,14 @@ class LateNoShowService
                         $queue->update(['dentist_id' => $newDentist->id]);
                         $result['reassigned']++;
 
-                        activity()
-                            ->performedOn($queue->appointment)
-                            ->event('dentist_reassigned')
-                            ->log('Reassigned to Dr. ' . $newDentist->name . ' (dentist unavailable)');
+                        ActivityLogger::log(
+                            'dentist_reassigned',
+                            'Appointment',
+                            $queue->appointment->id,
+                            'Reassigned to Dr. ' . $newDentist->name . ' (dentist unavailable)',
+                            ['dentist_id' => $dentistId],
+                            ['dentist_id' => $newDentist->id]
+                        );
                     } else {
                         $result['failed']++;
                     }
@@ -131,10 +144,14 @@ class LateNoShowService
                     $queue->update(['queue_status' => 'paused']);
                     $result['paused']++;
 
-                    activity()
-                        ->performedOn($queue->appointment)
-                        ->event('queue_paused')
-                        ->log('Queue paused (dentist unavailable)');
+                    ActivityLogger::log(
+                        'queue_paused',
+                        'Appointment',
+                        $queue->appointment->id,
+                        'Queue paused (dentist unavailable)',
+                        ['queue_status' => $queue->queue_status],
+                        ['queue_status' => 'paused']
+                    );
                 }
             }
 
@@ -175,10 +192,14 @@ class LateNoShowService
                 'check_in_time' => now(),
             ]);
 
-            activity()
-                ->performedOn($appointment)
-                ->event('walk_in_created')
-                ->log('Walk-in patient created by staff');
+            ActivityLogger::log(
+                'walk_in_created',
+                'Appointment',
+                $appointment->id,
+                'Walk-in patient created: ' . $data['patient_name'],
+                null,
+                $appointment->toArray()
+            );
 
             return $appointment;
         });

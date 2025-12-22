@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Feedback;
 use App\Models\Appointment;
 use Illuminate\Http\Request;
+use App\Services\ActivityLogger;
 
 class FeedbackController extends Controller
 {
@@ -52,6 +53,17 @@ class FeedbackController extends Controller
         ]);
 
         $feedback = Feedback::create($validated);
+
+        // Log the feedback submission
+        $appointment = Appointment::find($validated['appointment_id']);
+        ActivityLogger::log(
+            'created',
+            'Feedback',
+            $feedback->id,
+            'Feedback submitted by ' . $validated['patient_name'] . ' - Rating: ' . $validated['rating'] . '/5',
+            null,
+            ['rating' => $feedback->rating, 'would_recommend' => $feedback->would_recommend, 'appointment_id' => $feedback->appointment_id]
+        );
 
         return redirect()->route('feedback.thanks', ['id' => $feedback->id])
             ->with('success', 'Thank you for your valuable feedback!');
