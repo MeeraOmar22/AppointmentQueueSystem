@@ -15,7 +15,7 @@ return new class extends Migration
         $table->id();
         $table->foreignId('appointment_id')->constrained();
         $table->integer('queue_number')->nullable();
-        $table->enum('queue_status', ['waiting', 'called', 'in_treatment', 'completed'])
+        $table->enum('queue_status', ['waiting', 'checked_in', 'in_treatment', 'completed'])
             ->default('waiting');
         $table->timestamp('check_in_time')->nullable();
         $table->timestamps();

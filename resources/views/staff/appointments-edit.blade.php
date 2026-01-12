@@ -138,8 +138,9 @@
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
                         <select class="form-select @error('status') is-invalid @enderror" name="status" required>
-                            <option value="pending" {{ old('status', $appointment->status) == 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="booked" {{ old('status', $appointment->status) == 'booked' ? 'selected' : '' }}>Booked</option>
+                            <option value="checked_in" {{ old('status', $appointment->status) == 'checked_in' ? 'selected' : '' }}>Checked In</option>
+                            <option value="in_treatment" {{ old('status', $appointment->status) == 'in_treatment' ? 'selected' : '' }}>In Treatment</option>
                             <option value="completed" {{ old('status', $appointment->status) == 'completed' ? 'selected' : '' }}>Completed</option>
                             <option value="cancelled" {{ old('status', $appointment->status) == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         </select>

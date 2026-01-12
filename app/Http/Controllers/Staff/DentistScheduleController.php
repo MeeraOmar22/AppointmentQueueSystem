@@ -10,7 +10,6 @@ use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Services\ActivityLogger;
-use App\Services\ActivityLogger;
 
 class DentistScheduleController extends Controller
 {

@@ -17,7 +17,7 @@ return new class extends Migration
             }
 
             if (!Schema::hasColumn('appointments', 'booking_source')) {
-                $table->enum('booking_source', ['public', 'walk-in'])->default('public')->after('status');
+                $table->enum('booking_source', ['public', 'walk-in', 'staff'])->default('public')->after('status');
             }
 
             if (!Schema::hasColumn('appointments', 'start_at')) {

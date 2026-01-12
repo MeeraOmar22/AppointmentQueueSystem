@@ -37,7 +37,7 @@ class AppointmentController extends Controller
             'service_id' => 'required|exists:services,id',
             'dentist_preference' => 'required|in:any,specific',
             'dentist_id' => 'nullable|exists:dentists,id',
-            'appointment_date' => 'required|date|after:today',
+            'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|date_format:H:i',
         ]);
 

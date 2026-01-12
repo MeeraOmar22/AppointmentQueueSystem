@@ -87,11 +87,14 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     Route::get('/staff/appointments/create', [StaffAppointmentController::class, 'create']);
     Route::post('/staff/appointments', [StaffAppointmentController::class, 'store']);
     Route::post('/staff/checkin/{id}', [StaffAppointmentController::class, 'checkIn']);
+    Route::post('/staff/appointments/{id}/check-in', [StaffAppointmentController::class, 'checkIn']);
     Route::post('/staff/walk-in', [StaffAppointmentController::class, 'storeWalkIn']);
-    Route::post('/staff/queue/{queue}/status', [StaffAppointmentController::class, 'updateQueueStatus']);
+    Route::put('/staff/queue/{queue}', [StaffAppointmentController::class, 'updateQueueStatus']);
     Route::get('/staff/appointments/{id}/edit', [StaffAppointmentController::class, 'edit']);
     Route::put('/staff/appointments/{id}', [StaffAppointmentController::class, 'update']);
     Route::delete('/staff/appointments/{id}', [StaffAppointmentController::class, 'destroy']);
+    Route::get('/staff/treatment-completion', [StaffAppointmentController::class, 'completionPage'])->name('treatment.completion');
+    Route::post('/staff/treatment-completion/{appointmentId}', [StaffAppointmentController::class, 'completeTreatment'])->name('treatment.complete');
 
     
     // Operating Hours Management
@@ -161,6 +164,18 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     // Staff Calendar
     Route::get('/staff/calendar', [CalendarController::class, 'index'])->name('staff.calendar.index');
     Route::get('/staff/calendar/events', [CalendarController::class, 'events'])->name('staff.calendar.events');
+    
+    // Treatment Completion & Queue Management
+    Route::get('/staff/treatment-completion', [StaffAppointmentController::class, 'completionPage'])->name('treatment.completion');
+    Route::post('/staff/treatment-completion/{appointmentId}', [StaffAppointmentController::class, 'completeTreatment'])->name('treatment.complete');
+    Route::post('/staff/pause-queue', [StaffAppointmentController::class, 'pauseQueue'])->name('queue.pause');
+    Route::post('/staff/resume-queue', [StaffAppointmentController::class, 'resumeQueue'])->name('queue.resume');
+    Route::get('/api/queue/status', [StaffAppointmentController::class, 'getQueueStatus'])->name('api.queue.status');
+    
+    // Waiting Area Display (TV Screen)
+    Route::get('/public/waiting-area', function () {
+        return view('public.waiting-area-display');
+    })->name('public.waiting-area');
     
     // Real-time API endpoint for staff appointments
     Route::get('/api/staff/appointments', [StaffAppointmentController::class, 'appointmentsApi']);

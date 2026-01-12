@@ -166,14 +166,16 @@
 
                                     $badgeClass = match($queueStatus) {
                                         'waiting' => 'badge-soft badge-waiting',
-                                        'in_service' => 'badge-soft badge-inservice',
+                                        'checked_in' => 'badge-soft badge-checkedin',
+                                        'in_treatment' => 'badge-soft badge-intreatment',
                                         'completed' => 'badge-soft badge-completed',
                                         default => 'badge bg-light text-muted'
                                     };
 
                                     $badgeText = match($queueStatus) {
                                         'waiting' => 'Waiting',
-                                        'in_service' => 'In Treatment',
+                                        'checked_in' => 'Checked In',
+                                        'in_treatment' => 'In Treatment',
                                         'completed' => 'Done',
                                         default => 'Not Queued'
                                     };
@@ -226,18 +228,21 @@
                                             </form>
                                         @else
                                             <div class="btn-group" role="group">
-                                                <form method="POST" action="/staff/queue/{{ $queue->id }}/status" class="d-inline">
+                                                <form method="POST" action="/staff/queue/{{ $queue->id }}" class="d-inline">
                                                     @csrf
+                                                    @method('PUT')
                                                     <input type="hidden" name="status" value="waiting">
                                                     <button class="btn btn-sm btn-ghost" {{ $queueStatus === 'waiting' || $queueStatus === 'completed' ? 'disabled' : '' }}>Waiting</button>
                                                 </form>
-                                                <form method="POST" action="/staff/queue/{{ $queue->id }}/status" class="d-inline">
+                                                <form method="POST" action="/staff/queue/{{ $queue->id }}" class="d-inline">
                                                     @csrf
-                                                    <input type="hidden" name="status" value="in_service">
-                                                    <button class="btn btn-sm btn-ghost" {{ $queueStatus === 'in_service' || $queueStatus === 'completed' ? 'disabled' : '' }}>Start</button>
+                                                    @method('PUT')
+                                                    <input type="hidden" name="status" value="in_treatment">
+                                                    <button class="btn btn-sm btn-ghost" {{ $queueStatus === 'in_treatment' || $queueStatus === 'completed' ? 'disabled' : '' }}>Start</button>
                                                 </form>
-                                                <form method="POST" action="/staff/queue/{{ $queue->id }}/status" class="d-inline appointment-done-form">
+                                                <form method="POST" action="/staff/queue/{{ $queue->id }}" class="d-inline appointment-done-form">
                                                     @csrf
+                                                    @method('PUT')
                                                     <input type="hidden" name="status" value="completed">
                                                     <button type="button" class="btn btn-sm btn-success done-btn" data-appointment-id="{{ $appointment->id }}" {{ $queueStatus === 'completed' ? 'disabled' : '' }}>Done</button>
                                                 </form>

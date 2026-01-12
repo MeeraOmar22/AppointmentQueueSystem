@@ -569,6 +569,9 @@
         <a class="nav-link {{ request()->is('staff/appointments') ? 'active' : '' }}" href="/staff/appointments">
             <i class="bi bi-calendar-check"></i> Appointments & Queue
         </a>
+        <a class="nav-link {{ request()->is('staff/treatment-completion') ? 'active' : '' }}" href="/staff/treatment-completion">
+            <i class="bi bi-clipboard-check"></i> Treatment Completion
+        </a>
         <a class="nav-link {{ request()->is('staff/operating-hours*') ? 'active' : '' }}" href="/staff/operating-hours">
             <i class="bi bi-clock"></i> Operating Hours
         </a>

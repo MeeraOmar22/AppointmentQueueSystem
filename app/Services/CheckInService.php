@@ -36,7 +36,7 @@ class CheckInService
                 // Update existing queue entry
                 $queue->update([
                     'check_in_time' => now(),
-                    'queue_status' => 'waiting',
+                    'queue_status' => 'checked_in',
                 ]);
             }
 
@@ -47,7 +47,7 @@ class CheckInService
                 $appointment->id,
                 'Patient ' . $appointment->patient_name . ' checked in',
                 null,
-                ['queue_number' => $queue->queue_number, 'status' => 'waiting']
+                ['queue_number' => $queue->queue_number, 'status' => 'checked_in']
             );
 
             return $queue;

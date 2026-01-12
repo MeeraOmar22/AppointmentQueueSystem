@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Services\ActivityLogger;
+use App\Services\WhatsAppSender;
 
 
 class AppointmentController extends Controller
@@ -105,7 +106,7 @@ class AppointmentController extends Controller
                     ? max((int) ($entry->appointment->service->estimated_duration ?? 0), 15)
                     : 15;
                 $runningTotal += $duration;
-            } elseif ($entry->queue_status === 'in_service') {
+            } elseif ($entry->queue_status === 'in_treatment') {
                 $waitingTimeMap[$entry->appointment_id] = 0; // Currently being served
                 $inServiceCount++;
             }
@@ -115,7 +116,7 @@ class AppointmentController extends Controller
             'total' => $todayAppointments->count(),
             'queued' => $queueEntries->count(),
             'waiting' => $queueEntries->where('queue_status', 'waiting')->count(),
-            'in_service' => $queueEntries->where('queue_status', 'in_service')->count(),
+            'in_service' => $queueEntries->where('queue_status', 'in_treatment')->count(),
             'completed' => $queueEntries->where('queue_status', 'completed')->count(),
         ];
 
@@ -214,7 +215,7 @@ class AppointmentController extends Controller
             $queue->queue_number = Queue::nextNumberForDate($appointment->appointment_date);
         }
 
-        $queue->queue_status = 'waiting';
+        $queue->queue_status = 'checked_in';
         $queue->check_in_time = now();
         $queue->save();
 
@@ -226,7 +227,7 @@ class AppointmentController extends Controller
     public function updateQueueStatus(Request $request, $queueId)
     {
         $data = $request->validate([
-            'status' => 'required|in:waiting,in_service,completed',
+            'status' => 'required|in:waiting,checked_in,in_treatment,completed',
         ]);
 
         $queue = Queue::with('appointment')->findOrFail($queueId);
@@ -234,8 +235,9 @@ class AppointmentController extends Controller
         $queue->save();
 
         if ($queue->appointment) {
+            // Update appointment status to match queue status
             $queue->appointment->update([
-                'status' => $data['status'] === 'completed' ? 'completed' : 'booked',
+                'status' => $data['status'],
             ]);
         }
 
@@ -270,7 +272,7 @@ class AppointmentController extends Controller
             'dentist_id' => 'required|exists:dentists,id',
             'appointment_date' => 'required|date',
             'appointment_time' => 'required',
-            'status' => 'required|in:pending,booked,completed,cancelled',
+            'status' => 'required|in:booked,checked_in,in_treatment,completed,cancelled',
         ]);
 
         $service = Service::findOrFail($data['service_id']);
@@ -320,7 +322,7 @@ class AppointmentController extends Controller
             'dentist_id' => 'required|exists:dentists,id',
             'appointment_date' => 'required|date',
             'appointment_time' => 'required',
-            'status' => 'required|in:pending,booked,completed,cancelled',
+            'status' => 'required|in:booked,checked_in,in_treatment,completed,cancelled',
         ]);
 
         $service = Service::findOrFail($data['service_id']);
@@ -503,7 +505,7 @@ class AppointmentController extends Controller
                     ? max((int) ($entry->appointment->service->estimated_duration ?? 0), 15)
                     : 15;
                 $runningTotal += $duration;
-            } elseif ($entry->queue_status === 'in_service') {
+            } elseif ($entry->queue_status === 'in_treatment') {
                 $waitingTimeMap[$entry->appointment_id] = 0; // Currently being served
                 $inServiceCount++;
             }
@@ -513,7 +515,7 @@ class AppointmentController extends Controller
             'total' => $todayAppointments->count(),
             'queued' => $queueEntries->count(),
             'waiting' => $queueEntries->where('queue_status', 'waiting')->count(),
-            'in_service' => $queueEntries->where('queue_status', 'in_service')->count(),
+            'in_service' => $queueEntries->where('queue_status', 'in_treatment')->count(),
             'completed' => $queueEntries->where('queue_status', 'completed')->count(),
         ];
 
@@ -543,4 +545,271 @@ class AppointmentController extends Controller
             'appointments' => $appointmentsData,
         ]);
     }
+
+    /**
+     * Show treatment completion page for dentist
+     */
+    public function completionPage()
+    {
+        $appointments = Appointment::with(['queue', 'service', 'dentist'])
+            ->whereDate('appointment_date', Carbon::today())
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('appointment_time')
+            ->get();
+
+        // Get queue settings (pause/resume status)
+        $queueSettings = DB::table('queue_settings')->first();
+        $isPaused = $queueSettings->is_paused ?? false;
+        $autoTransitionSeconds = $queueSettings->auto_transition_seconds ?? 30;
+
+        // Get treatment rooms
+        $treatmentRooms = DB::table('treatment_rooms')
+            ->where('is_active', true)
+            ->get();
+
+        // Get current patient in treatment
+        $currentPatient = Appointment::with(['queue', 'service', 'dentist'])
+            ->whereDate('appointment_date', Carbon::today())
+            ->where('status', 'in_treatment')
+            ->first();
+
+        // Get next patient (called or checked_in)
+        $nextPatient = Appointment::with(['queue', 'service', 'dentist'])
+            ->whereDate('appointment_date', Carbon::today())
+            ->whereIn('status', ['called', 'checked_in'])
+            ->orderByRaw("CASE WHEN status = 'called' THEN 1 WHEN status = 'checked_in' THEN 2 END ASC")
+            ->first();
+
+        // Get waiting count (patients waiting to be called)
+        $waitingCount = Appointment::whereDate('appointment_date', Carbon::today())
+            ->where('status', 'checked_in')
+            ->count();
+
+        return view('staff.treatment-completion', compact(
+            'appointments',
+            'isPaused',
+            'autoTransitionSeconds',
+            'treatmentRooms',
+            'currentPatient',
+            'nextPatient',
+            'waitingCount'
+        ));
+    }
+
+    /**
+     * Complete treatment for a patient (auto-progression)
+     */
+    public function completeTreatment(Request $request, $appointmentId)
+    {
+        $appointment = Appointment::with('queue')->findOrFail($appointmentId);
+        
+        if (!$appointment->queue) {
+            return response()->json(['error' => 'Queue not found'], 404);
+        }
+
+        $request->validate([
+            'treatment_room_id' => 'nullable|exists:treatment_rooms,id',
+        ]);
+
+        // Update room assignment if provided
+        if ($request->treatment_room_id) {
+            $appointment->queue->update(['treatment_room_id' => $request->treatment_room_id]);
+        }
+
+        // Mark treatment as completed
+        $appointment->queue->update(['queue_status' => 'completed']);
+        $appointment->update(['status' => 'completed']);
+
+        ActivityLogger::log(
+            'treatment_completed',
+            'Appointment',
+            $appointment->id,
+            'Treatment completed for ' . $appointment->patient_name,
+            null,
+            ['dentist' => auth()->user()->name, 'completion_time' => now()]
+        );
+
+        // Get queue settings to check if paused
+        $queueSettings = DB::table('queue_settings')->first();
+        
+        // Auto-call next patient if queue is not paused
+        if (!$queueSettings->is_paused) {
+            $this->callNextPatient();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Treatment marked as completed for ' . $appointment->patient_name
+        ]);
+    }
+
+    /**
+     * Auto-call next waiting patient
+     */
+    private function callNextPatient()
+    {
+        $today = Carbon::today();
+        
+        // Find next patient in checked_in status
+        $nextPatient = Appointment::with(['queue', 'service'])
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'checked_in')
+            ->orderBy('appointment_time')
+            ->first();
+
+        if ($nextPatient && $nextPatient->queue) {
+            // Update status to 'called'
+            $nextPatient->queue->update(['queue_status' => 'called', 'called_at' => now()]);
+            $nextPatient->update(['status' => 'called']);
+
+            // Send WhatsApp notification
+            try {
+                $whatsApp = new WhatsAppSender();
+                $room = $nextPatient->queue->treatment_room_id 
+                    ? DB::table('treatment_rooms')->find($nextPatient->queue->treatment_room_id)->room_code
+                    : 'Waiting Area';
+                
+                $message = "Your turn! Please proceed to " . $room . ". Thank you!";
+                $whatsApp->sendMessage($nextPatient->phone, $message);
+            } catch (\Exception $e) {
+                // Log error but don't fail
+                logger()->error('WhatsApp notification failed: ' . $e->getMessage());
+            }
+
+            ActivityLogger::log(
+                'patient_called',
+                'Appointment',
+                $nextPatient->id,
+                'Patient ' . $nextPatient->patient_name . ' automatically called',
+                null,
+                ['called_time' => now()]
+            );
+        }
+    }
+
+    /**
+     * Pause queue - stop auto-calling new patients
+     */
+    public function pauseQueue()
+    {
+        DB::table('queue_settings')->update([
+            'is_paused' => true,
+            'paused_at' => now()
+        ]);
+
+        ActivityLogger::log(
+            'queue_paused',
+            'Queue',
+            1,
+            'Queue processing paused',
+            null,
+            ['paused_by' => auth()->user()->name]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Queue paused']);
+    }
+
+    /**
+     * Resume queue - restart auto-calling
+     */
+    public function resumeQueue()
+    {
+        DB::table('queue_settings')->update([
+            'is_paused' => false,
+            'resumed_at' => now()
+        ]);
+
+        ActivityLogger::log(
+            'queue_resumed',
+            'Queue',
+            1,
+            'Queue processing resumed',
+            null,
+            ['resumed_by' => auth()->user()->name]
+        );
+
+        // Call next patient if any are waiting
+        $this->callNextPatient();
+
+        return response()->json(['success' => true, 'message' => 'Queue resumed']);
+    }
+
+    /**
+     * Get current queue status via API
+     */
+    public function getQueueStatus()
+    {
+        $today = Carbon::today();
+        $queueSettings = DB::table('queue_settings')->first();
+
+        $currentPatient = Appointment::with(['queue', 'service'])
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'in_treatment')
+            ->first();
+
+        $calledPatient = Appointment::with(['queue', 'service'])
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'called')
+            ->first();
+
+        $waitingCount = Appointment::whereDate('appointment_date', $today)
+            ->where('status', 'checked_in')
+            ->count();
+
+        // Get next patients (called status patients)
+        $nextPatients = Appointment::with(['queue', 'service'])
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'called')
+            ->orderBy('appointment_time')
+            ->limit(5)
+            ->get()
+            ->map(function ($appointment) {
+                return [
+                    'id' => $appointment->id,
+                    'patient_name' => $appointment->patient_name,
+                    'queue_number' => $appointment->queue?->queue_number,
+                    'phone' => $appointment->patient_phone,
+                    'service_name' => $appointment->service->name ?? 'N/A',
+                    'appointment_time' => $appointment->appointment_time
+                ];
+            });
+
+        $totalCount = Appointment::whereDate('appointment_date', $today)
+            ->whereIn('status', ['checked_in', 'called', 'in_treatment'])
+            ->count();
+
+        $status = $queueSettings->is_paused ? 'paused' : 'queue_active';
+        if ($totalCount === 0 && !$currentPatient && !$calledPatient) {
+            $status = 'queue_empty';
+        }
+
+        return response()->json([
+            'status' => $status,
+            'is_paused' => $queueSettings->is_paused,
+            'current_patient' => $currentPatient ? [
+                'id' => $currentPatient->id,
+                'patient_name' => $currentPatient->patient_name,
+                'phone' => $currentPatient->patient_phone,
+                'service' => $currentPatient->service->name ?? 'N/A',
+                'appointment_status' => $currentPatient->status,
+                'room' => $currentPatient->queue && $currentPatient->queue->treatment_room_id 
+                    ? DB::table('treatment_rooms')->find($currentPatient->queue->treatment_room_id)->room_code
+                    : null
+            ] : null,
+            'called_patient' => $calledPatient ? [
+                'id' => $calledPatient->id,
+                'patient_name' => $calledPatient->patient_name,
+                'phone' => $calledPatient->patient_phone,
+                'service' => $calledPatient->service->name ?? 'N/A',
+                'appointment_status' => $calledPatient->status,
+                'room' => $calledPatient->queue && $calledPatient->queue->treatment_room_id 
+                    ? DB::table('treatment_rooms')->find($calledPatient->queue->treatment_room_id)->room_code
+                    : 'Waiting'
+            ] : null,
+            'waiting_count' => $waitingCount,
+            'total_count' => $totalCount,
+            'next_patients' => $nextPatients
+        ]);
+    }
 }
+
