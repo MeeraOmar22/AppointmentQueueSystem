@@ -16,9 +16,9 @@ class DashboardController extends Controller
         // Get statistics
         $totalLogs = ActivityLog::count();
         $logsToday = ActivityLog::whereDate('created_at', today())->count();
-        $logTypes = ActivityLog::select('action_type')
+        $logTypes = ActivityLog::select('action')
             ->distinct()
-            ->pluck('action_type');
+            ->pluck('action');
 
         // Get recent activity logs
         $recentLogs = ActivityLog::latest()
@@ -41,7 +41,7 @@ class DashboardController extends Controller
 
         // Filter by action type
         if ($request->action_type) {
-            $query->where('action_type', $request->action_type);
+            $query->where('action', $request->action_type);
         }
 
         // Filter by model type
@@ -69,7 +69,7 @@ class DashboardController extends Controller
         }
 
         $logs = $query->latest()->paginate(50);
-        $actionTypes = ActivityLog::select('action_type')->distinct()->pluck('action_type');
+        $actionTypes = ActivityLog::select('action')->distinct()->pluck('action');
         $modelTypes = ActivityLog::select('model_type')->distinct()->pluck('model_type');
 
         return view('developer.dashboard.activity-logs', compact(

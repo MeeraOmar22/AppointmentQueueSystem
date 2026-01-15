@@ -21,6 +21,8 @@ use App\Http\Controllers\Staff\FeedbackController as StaffFeedbackController;
 use App\Http\Controllers\Staff\RoomController;
 use App\Http\Controllers\Developer\DashboardController as DeveloperDashboardController;
 use App\Http\Controllers\Api\QueueController;
+use App\Http\Controllers\Staff\ReportController;
+use App\Http\Controllers\PatientReportController;
 
 
 Route::get('/', function () {
@@ -63,7 +65,7 @@ Route::get('/feedback', [FeedbackController::class, 'create'])->name('feedback.c
 Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 Route::get('/feedback/thanks/{id?}', [FeedbackController::class, 'thanks'])->name('feedback.thanks');
 
-Route::middleware(['auth', 'role:staff'])->group(function () {
+Route::middleware(['auth', 'role:staff|developer'])->group(function () {
     // Quick Edit Dashboard
     Route::get('/staff/quick-edit', [QuickEditController::class, 'index']);
     Route::patch('/staff/dentists/{dentist}/status', [QuickEditController::class, 'updateDentistStatus']);
@@ -169,6 +171,12 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     
     // Real-time API endpoint for staff appointments
     Route::get('/api/staff/appointments', [StaffAppointmentController::class, 'appointmentsApi']);
+    
+    // Staff Reports & Analytics
+    Route::get('/staff/reports/dashboard', [ReportController::class, 'dashboard'])->name('reports.dashboard');
+    Route::get('/staff/reports/appointments', [ReportController::class, 'appointmentAnalysis'])->name('reports.appointments');
+    Route::get('/staff/reports/revenue', [ReportController::class, 'revenueReport'])->name('reports.revenue');
+    Route::get('/staff/reports/export-appointments', [ReportController::class, 'exportAppointments'])->name('reports.export');
 });
 
 // Developer Routes (role: developer) - Protected with auth and role middleware
@@ -179,6 +187,14 @@ Route::middleware(['auth', 'role:developer'])->group(function () {
     Route::get('/developer/api-test', [DeveloperDashboardController::class, 'apiTest'])->name('developer.api-test');
     Route::get('/developer/system-info', [DeveloperDashboardController::class, 'systemInfo'])->name('developer.system-info');
     Route::get('/developer/database', [DeveloperDashboardController::class, 'databaseTools'])->name('developer.database');
+});
+
+// Patient Report Routes (authenticated patients only)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/my-reports/appointments', [PatientReportController::class, 'appointmentHistory'])->name('patient.reports.appointments');
+    Route::get('/my-reports/treatments', [PatientReportController::class, 'treatmentHistory'])->name('patient.reports.treatments');
+    Route::get('/my-reports/feedback', [PatientReportController::class, 'myFeedback'])->name('patient.reports.feedback');
+    Route::get('/my-reports/export', [PatientReportController::class, 'exportRecords'])->name('patient.reports.export-records');
 });
 
 // Real-time API endpoints for live updates (public)

@@ -590,6 +590,9 @@
         <a class="nav-link {{ request()->is('staff/feedback*') ? 'active' : '' }}" href="/staff/feedback">
             <i class="bi bi-chat-heart"></i> Patient Feedback
         </a>
+        <a class="nav-link {{ request()->is('staff/reports*') ? 'active' : '' }}" href="/staff/reports/dashboard">
+            <i class="bi bi-bar-chart"></i> Reports & Analytics
+        </a>
         @if(Auth::user()->role === 'developer')
             <hr class="my-2" style="opacity: 0.1;">
             <a class="nav-link" href="/developer/dashboard" target="_blank">

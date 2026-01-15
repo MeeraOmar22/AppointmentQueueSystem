@@ -87,14 +87,14 @@
                 @if ($log->old_values)
                     <div class="mb-3">
                         <label class="form-label">Before (Old Values)</label>
-                        <pre style="background: #f3f4f6; padding: 1rem; border-radius: 6px; max-height: 300px; overflow-y: auto;">{{ json_encode(json_decode($log->old_values, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                        <pre style="background: #f3f4f6; padding: 1rem; border-radius: 6px; max-height: 300px; overflow-y: auto;">{{ json_encode($log->old_values, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>
                 @endif
 
                 @if ($log->new_values)
                     <div class="mb-3">
                         <label class="form-label">After (New Values)</label>
-                        <pre style="background: #f3f4f6; padding: 1rem; border-radius: 6px; max-height: 300px; overflow-y: auto;">{{ json_encode(json_decode($log->new_values, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                        <pre style="background: #f3f4f6; padding: 1rem; border-radius: 6px; max-height: 300px; overflow-y: auto;">{{ json_encode($log->new_values, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>
                 @endif
             </div>

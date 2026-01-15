@@ -20,15 +20,13 @@ return new class extends Migration
             Schema::getConnection()->statement(
                 "UPDATE users SET role = 'staff' WHERE role NOT IN ('patient', 'staff', 'admin', 'developer')"
             );
-        } else {
+        } elseif ($driver === 'mysql') {
             Schema::table('users', function (Blueprint $table) {
-                if ($driver === 'mysql') {
-                    $table->enum('role', ['patient', 'staff', 'admin', 'developer'])->default('patient')->change();
-                } elseif ($driver === 'pgsql') {
-                    // PostgreSQL handling
-                    Schema::getConnection()->statement("ALTER TYPE user_role ADD VALUE 'developer'");
-                }
+                $table->enum('role', ['patient', 'staff', 'admin', 'developer'])->default('patient')->change();
             });
+        } elseif ($driver === 'pgsql') {
+            // PostgreSQL handling
+            Schema::getConnection()->statement("ALTER TYPE user_role ADD VALUE 'developer'");
         }
     }
 

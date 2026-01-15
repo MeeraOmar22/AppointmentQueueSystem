@@ -30,7 +30,24 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <!-- Left Side Of Navbar -->
                     <ul class="navbar-nav me-auto">
-
+                        @auth
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-file-alt me-1"></i>My Reports
+                                </a>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{{ route('patient.reports.appointments') }}">
+                                        <i class="fas fa-calendar-check me-2"></i>My Appointments
+                                    </a>
+                                    <a class="dropdown-item" href="{{ route('patient.reports.treatments') }}">
+                                        <i class="fas fa-prescription-bottle me-2"></i>Treatment History
+                                    </a>
+                                    <a class="dropdown-item" href="{{ route('patient.reports.feedback') }}">
+                                        <i class="fas fa-star me-2"></i>My Feedback
+                                    </a>
+                                </div>
+                            </li>
+                        @endauth
                     </ul>
 
                     <!-- Right Side Of Navbar -->

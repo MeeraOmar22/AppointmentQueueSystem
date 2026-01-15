@@ -97,6 +97,7 @@
                     </div>
 
                     <div class="text-center mt-4">
+                        <p class="text-muted mb-3">Don't have an account? <a href="{{ route('register') }}" class="text-primary text-decoration-none fw-semibold">Register here</a></p>
                         <a href="{{ url('/') }}" class="text-primary text-decoration-none fw-semibold">
                             <i class="bi bi-arrow-left me-2"></i>Back to Home
                         </a>
