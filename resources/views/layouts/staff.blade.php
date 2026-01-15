@@ -587,16 +587,15 @@
         <a class="nav-link {{ request()->is('staff/services*') ? 'active' : '' }}" href="/staff/services">
             <i class="bi bi-grid-3x3-gap-fill"></i> Services
         </a>
-        <a class="nav-link {{ request()->is('staff/activity-logs*') ? 'active' : '' }}" href="/staff/activity-logs">
-            <i class="bi bi-clock-history"></i> Activity Logs
-        </a>
         <a class="nav-link {{ request()->is('staff/feedback*') ? 'active' : '' }}" href="/staff/feedback">
             <i class="bi bi-chat-heart"></i> Patient Feedback
         </a>
-        <hr class="my-2" style="opacity: 0.1;">
-        <a class="nav-link {{ request()->is('staff/developer*') ? 'active' : '' }}" href="/staff/developer">
-            <i class="bi bi-code-slash"></i> Developer Tools
-        </a>
+        @if(Auth::user()->role === 'developer')
+            <hr class="my-2" style="opacity: 0.1;">
+            <a class="nav-link" href="/developer/dashboard" target="_blank">
+                <i class="bi bi-code-slash"></i> Developer Tools <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.8rem;"></i>
+            </a>
+        @endif
         <hr class="my-2" style="opacity: 0.1;">
         <a class="nav-link {{ request()->is('staff/past*') ? 'active' : '' }}" href="/staff/past">
             <i class="bi bi-trash"></i> Past Records

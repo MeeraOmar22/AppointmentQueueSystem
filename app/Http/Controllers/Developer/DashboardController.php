@@ -1,0 +1,124 @@
+<?php
+
+namespace App\Http\Controllers\Developer;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+
+class DashboardController extends Controller
+{
+    /**
+     * Show the developer dashboard
+     */
+    public function index()
+    {
+        // Get statistics
+        $totalLogs = ActivityLog::count();
+        $logsToday = ActivityLog::whereDate('created_at', today())->count();
+        $logTypes = ActivityLog::select('action_type')
+            ->distinct()
+            ->pluck('action_type');
+
+        // Get recent activity logs
+        $recentLogs = ActivityLog::latest()
+            ->paginate(25);
+
+        return view('developer.dashboard.index', compact(
+            'totalLogs',
+            'logsToday',
+            'logTypes',
+            'recentLogs'
+        ));
+    }
+
+    /**
+     * Show activity logs
+     */
+    public function activityLogs(Request $request)
+    {
+        $query = ActivityLog::query();
+
+        // Filter by action type
+        if ($request->action_type) {
+            $query->where('action_type', $request->action_type);
+        }
+
+        // Filter by model type
+        if ($request->model_type) {
+            $query->where('model_type', $request->model_type);
+        }
+
+        // Filter by date range
+        if ($request->date_from) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Search
+        if ($request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('user_id', 'like', "%{$search}%")
+                  ->orWhere('model_id', 'like', "%{$search}%");
+            });
+        }
+
+        $logs = $query->latest()->paginate(50);
+        $actionTypes = ActivityLog::select('action_type')->distinct()->pluck('action_type');
+        $modelTypes = ActivityLog::select('model_type')->distinct()->pluck('model_type');
+
+        return view('developer.dashboard.activity-logs', compact(
+            'logs',
+            'actionTypes',
+            'modelTypes'
+        ));
+    }
+
+    /**
+     * Show log details
+     */
+    public function logDetails($id)
+    {
+        $log = ActivityLog::findOrFail($id);
+
+        return view('developer.dashboard.log-details', compact('log'));
+    }
+
+    /**
+     * Show API testing tool
+     */
+    public function apiTest()
+    {
+        return view('developer.tools.api-test');
+    }
+
+    /**
+     * Show system info
+     */
+    public function systemInfo()
+    {
+        $info = [
+            'app_name' => config('app.name'),
+            'app_env' => config('app.env'),
+            'app_debug' => config('app.debug'),
+            'laravel_version' => app()->version(),
+            'php_version' => phpversion(),
+            'database' => config('database.default'),
+        ];
+
+        return view('developer.tools.system-info', compact('info'));
+    }
+
+    /**
+     * Show database tools
+     */
+    public function databaseTools()
+    {
+        return view('developer.tools.database');
+    }
+}

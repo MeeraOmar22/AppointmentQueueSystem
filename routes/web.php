@@ -18,8 +18,9 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\Staff\FeedbackController as StaffFeedbackController;
-use App\Http\Controllers\Staff\DeveloperController;
 use App\Http\Controllers\Staff\RoomController;
+use App\Http\Controllers\Developer\AuthController as DeveloperAuthController;
+use App\Http\Controllers\Developer\DashboardController as DeveloperDashboardController;
 use App\Http\Controllers\Api\QueueController;
 
 
@@ -147,19 +148,9 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     Route::post('/staff/dentist-leaves', [DentistLeaveController::class, 'store'])->name('staff.dentist-leaves.store');
     Route::delete('/staff/dentist-leaves/{dentistLeave}', [DentistLeaveController::class, 'destroy'])->name('staff.dentist-leaves.destroy');
     
-    // Activity Logs
-    Route::get('/staff/activity-logs', [ActivityLogController::class, 'index']);
-
     // Feedback Management
     Route::get('/staff/feedback', [StaffFeedbackController::class, 'index'])->name('staff.feedback.index');
     Route::get('/staff/feedback/{id}', [StaffFeedbackController::class, 'show'])->name('staff.feedback.show');
-
-    // Developer Tools
-    Route::get('/staff/developer', [DeveloperController::class, 'login']);
-    Route::post('/staff/developer/authenticate', [DeveloperController::class, 'authenticate']);
-    Route::get('/staff/developer/dashboard', [DeveloperController::class, 'dashboard']);
-    Route::get('/staff/developer/api-test', [DeveloperController::class, 'apiTest']);
-    Route::get('/staff/developer/logout', [DeveloperController::class, 'logout']);
 
     // Staff Calendar
     Route::get('/staff/calendar', [CalendarController::class, 'index'])->name('staff.calendar.index');
@@ -180,6 +171,21 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     // Real-time API endpoint for staff appointments
     Route::get('/api/staff/appointments', [StaffAppointmentController::class, 'appointmentsApi']);
 });
+
+// Developer Routes (role: developer)
+Route::middleware(['auth', 'role:developer'])->group(function () {
+    Route::get('/developer/dashboard', [DeveloperDashboardController::class, 'index'])->name('developer.dashboard');
+    Route::get('/developer/activity-logs', [DeveloperDashboardController::class, 'activityLogs'])->name('developer.activity-logs');
+    Route::get('/developer/activity-logs/{id}', [DeveloperDashboardController::class, 'logDetails'])->name('developer.log-details');
+    Route::get('/developer/api-test', [DeveloperDashboardController::class, 'apiTest'])->name('developer.api-test');
+    Route::get('/developer/system-info', [DeveloperDashboardController::class, 'systemInfo'])->name('developer.system-info');
+    Route::get('/developer/database', [DeveloperDashboardController::class, 'databaseTools'])->name('developer.database');
+    Route::post('/developer/logout', [DeveloperAuthController::class, 'logout'])->name('developer.logout');
+});
+
+// Developer Auth Routes (no auth required)
+Route::get('/developer/login', [DeveloperAuthController::class, 'showLoginForm'])->name('developer.login');
+Route::post('/developer/login', [DeveloperAuthController::class, 'login'])->name('developer.login.submit');
 
 // Real-time API endpoints for live updates (public)
 Route::get('/api/track/{code}', [AppointmentController::class, 'trackByCodeApi']);
