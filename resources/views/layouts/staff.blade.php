@@ -590,9 +590,29 @@
         <a class="nav-link {{ request()->is('staff/feedback*') ? 'active' : '' }}" href="/staff/feedback">
             <i class="bi bi-chat-heart"></i> Patient Feedback
         </a>
-        <a class="nav-link {{ request()->is('staff/reports*') ? 'active' : '' }}" href="/staff/reports/dashboard">
-            <i class="bi bi-bar-chart"></i> Reports & Analytics
-        </a>
+        <div class="nav-item dropdown">
+            <a class="nav-link {{ request()->is('staff/reports*') ? 'active' : '' }} dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bar-chart"></i> Reports & Analytics
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="reportsDropdown" style="font-size: 0.95rem;">
+                <li><a class="dropdown-item" href="/staff/reports/dashboard">
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                </a></li>
+                <li><a class="dropdown-item" href="/staff/reports/appointments">
+                    <i class="bi bi-calendar-check me-2"></i>Appointment Analysis
+                </a></li>
+                <li><a class="dropdown-item" href="/staff/reports/revenue">
+                    <i class="bi bi-cash-coin me-2"></i>Revenue Reports
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/staff/reports/patient-retention">
+                    <i class="bi bi-shield-exclamation me-2"></i>Patient Retention
+                </a></li>
+                <li><a class="dropdown-item" href="/staff/reports/scheduling-optimization">
+                    <i class="bi bi-calendar-week me-2"></i>Scheduling Optimization
+                </a></li>
+            </ul>
+        </div>
         @if(Auth::user()->role === 'developer')
             <hr class="my-2" style="opacity: 0.1;">
             <a class="nav-link" href="/developer/dashboard" target="_blank">

@@ -177,6 +177,8 @@ Route::middleware(['auth', 'role:staff|developer'])->group(function () {
     Route::get('/staff/reports/appointments', [ReportController::class, 'appointmentAnalysis'])->name('reports.appointments');
     Route::get('/staff/reports/revenue', [ReportController::class, 'revenueReport'])->name('reports.revenue');
     Route::get('/staff/reports/export-appointments', [ReportController::class, 'exportAppointments'])->name('reports.export');
+    Route::get('/staff/reports/patient-retention', [ReportController::class, 'patientRetention'])->name('reports.patient-retention');
+    Route::get('/staff/reports/scheduling-optimization', [ReportController::class, 'schedulingOptimization'])->name('reports.scheduling-optimization');
 });
 
 // Developer Routes (role: developer) - Protected with auth and role middleware
