@@ -71,7 +71,7 @@
                                         {{ $item->created_at->format('d M Y, H:i') }}
                                     </p>
                                     <p class="mb-0">
-                                        {{ $item->comment ?? 'No comment provided' }}
+                                        {{ $item->comments ?? 'No comment provided' }}
                                     </p>
                                 </div>
                                 <div class="col-md-4 text-md-end">

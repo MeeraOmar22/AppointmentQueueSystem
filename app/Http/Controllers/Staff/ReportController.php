@@ -34,13 +34,13 @@ class ReportController extends Controller
             : 0;
 
         // Revenue Analysis
-        $revenueData = Appointment::select('services.name', 'services.cost')
+        $revenueData = Appointment::select('services.name', 'services.price')
             ->with('service')
             ->where('status', 'completed')
             ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
             ->join('services', 'appointments.service_id', '=', 'services.id')
-            ->groupBy('services.id', 'services.name', 'services.cost')
-            ->selectRaw('services.name, services.cost, COUNT(*) as count, (services.cost * COUNT(*)) as total_revenue')
+            ->groupBy('services.id', 'services.name', 'services.price')
+            ->selectRaw('services.name, services.price, COUNT(*) as count, (services.price * COUNT(*)) as total_revenue')
             ->orderByRaw('total_revenue DESC')
             ->get();
 
@@ -96,13 +96,41 @@ class ReportController extends Controller
     {
         $dateFrom = $request->query('date_from', now()->subMonths(1)->format('Y-m-d'));
         $dateTo = $request->query('date_to', now()->format('Y-m-d'));
+        
+        // Base query with filters
+        $query = Appointment::with(['dentist', 'service'])
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo]);
+        
+        // Apply status filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+        
+        // Apply dentist filter
+        if ($request->filled('dentist_id')) {
+            $query->where('dentist_id', $request->query('dentist_id'));
+        }
+        
+        $appointments = $query->orderBy('appointment_date', 'desc')->paginate(50);
 
-        $appointments = Appointment::with(['dentist', 'service'])
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->orderBy('appointment_date', 'desc')
-            ->paginate(50);
+        // Get counts for statistics
+        $countQuery = Appointment::whereBetween('appointment_date', [$dateFrom, $dateTo]);
+        $completedCount = (clone $countQuery)->where('status', 'completed')->count();
+        $cancelledCount = (clone $countQuery)->where('status', 'cancelled')->count();
+        $noShowCount = (clone $countQuery)->where('status', 'no_show')->count();
+        
+        // Get all dentists for filter dropdown
+        $dentists = Dentist::where('status', true)->orderBy('name')->get();
 
-        return view('staff.reports.appointment-analysis', compact('appointments', 'dateFrom', 'dateTo'));
+        return view('staff.reports.appointment-analysis', compact(
+            'appointments', 
+            'dateFrom', 
+            'dateTo',
+            'dentists',
+            'completedCount',
+            'cancelledCount',
+            'noShowCount'
+        ));
     }
 
     /**
@@ -113,18 +141,46 @@ class ReportController extends Controller
         $dateFrom = $request->query('date_from', now()->subMonths(1)->format('Y-m-d'));
         $dateTo = $request->query('date_to', now()->format('Y-m-d'));
 
-        $revenueByService = Appointment::select('services.name', 'services.cost')
+        $revenueByService = Appointment::select('services.name', 'services.price')
             ->where('status', 'completed')
             ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
             ->join('services', 'appointments.service_id', '=', 'services.id')
-            ->groupBy('services.id', 'services.name', 'services.cost')
-            ->selectRaw('services.name, services.cost, COUNT(*) as count, (services.cost * COUNT(*)) as total_revenue')
+            ->groupBy('services.id', 'services.name', 'services.price')
+            ->selectRaw('services.name, services.price, COUNT(*) as count, (services.price * COUNT(*)) as total_revenue')
             ->orderByRaw('total_revenue DESC')
             ->get();
 
         $totalRevenue = $revenueByService->sum('total_revenue');
+        
+        // Total appointments (completed only for revenue)
+        $totalAppointments = Appointment::where('status', 'completed')
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
+        
+        // Average revenue per appointment
+        $averagePerAppointment = $totalAppointments > 0 
+            ? round($totalRevenue / $totalAppointments, 2) 
+            : 0;
 
-        return view('staff.reports.revenue-report', compact('revenueByService', 'totalRevenue', 'dateFrom', 'dateTo'));
+        // Revenue by dentist
+        $revenueByDentist = Appointment::select('dentists.id', 'dentists.name', 'services.price')
+            ->where('status', 'completed')
+            ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
+            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('dentists.id', 'dentists.name')
+            ->selectRaw('dentists.id, dentists.name, COUNT(*) as completed_appointments, SUM(services.price) as total_revenue')
+            ->orderByRaw('total_revenue DESC')
+            ->get();
+
+        return view('staff.reports.revenue-report', compact(
+            'revenueByService', 
+            'totalRevenue', 
+            'dateFrom', 
+            'dateTo',
+            'totalAppointments',
+            'averagePerAppointment',
+            'revenueByDentist'
+        ));
     }
 
     /**
@@ -158,7 +214,7 @@ class ReportController extends Controller
                     $appointment->dentist->name ?? 'N/A',
                     $appointment->patient_name ?? 'N/A',
                     $appointment->status,
-                    $appointment->service->cost ?? 0
+                    $appointment->service->price ?? 0
                 ]);
             }
             

@@ -48,7 +48,37 @@ class PatientReportController extends Controller
             ->orderBy('appointment_date', 'desc')
             ->paginate(20);
 
-        return view('patient.reports.treatments', compact('treatments'));
+        $totalTreatments = $treatments->total();
+        
+        // Get unique services
+        $uniqueServices = Appointment::where('patient_email', auth()->user()->email)
+            ->where('status', 'completed')
+            ->distinct('service_id')
+            ->count('service_id');
+        
+        // Calculate service summary
+        $servicesSummary = Appointment::select('services.name')
+            ->where('patient_email', auth()->user()->email)
+            ->where('status', 'completed')
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('services.id', 'services.name')
+            ->selectRaw('services.name, COUNT(*) as count, SUM(services.price) as total_cost')
+            ->get()
+            ->map(function($item) {
+                return [
+                    'name' => $item->name,
+                    'count' => $item->count,
+                    'total_cost' => $item->total_cost ?? 0
+                ];
+            })
+            ->toArray();
+
+        return view('patient.reports.treatments', compact(
+            'treatments',
+            'totalTreatments',
+            'uniqueServices',
+            'servicesSummary'
+        ));
     }
 
     /**
@@ -56,17 +86,34 @@ class PatientReportController extends Controller
      */
     public function myFeedback(Request $request)
     {
-        $feedbacks = Feedback::where('email', auth()->user()->email)
+        $feedback = Feedback::where('patient_phone', auth()->user()->phone)
+            ->orWhere('patient_name', auth()->user()->name)
+            ->with(['appointment.service', 'appointment.dentist'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        $averageRating = Feedback::where('email', auth()->user()->email)->avg('rating') ?? 0;
-        $totalFeedbackSubmitted = Feedback::where('email', auth()->user()->email)->count();
+        $totalFeedback = Feedback::where('patient_phone', auth()->user()->phone)
+            ->orWhere('patient_name', auth()->user()->name)
+            ->count();
+        
+        $averageRating = Feedback::where('patient_phone', auth()->user()->phone)
+            ->orWhere('patient_name', auth()->user()->name)
+            ->avg('rating') ?? 0;
+
+        // Build rating distribution
+        $ratingDistribution = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $ratingDistribution[$i] = Feedback::where('patient_phone', auth()->user()->phone)
+                ->orWhere('patient_name', auth()->user()->name)
+                ->where('rating', $i)
+                ->count();
+        }
 
         return view('patient.reports.feedback', compact(
-            'feedbacks',
+            'feedback',
             'averageRating',
-            'totalFeedbackSubmitted'
+            'totalFeedback',
+            'ratingDistribution'
         ));
     }
 
