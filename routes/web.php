@@ -19,7 +19,6 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\Staff\FeedbackController as StaffFeedbackController;
 use App\Http\Controllers\Staff\RoomController;
-use App\Http\Controllers\Developer\AuthController as DeveloperAuthController;
 use App\Http\Controllers\Developer\DashboardController as DeveloperDashboardController;
 use App\Http\Controllers\Api\QueueController;
 
@@ -172,7 +171,7 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
     Route::get('/api/staff/appointments', [StaffAppointmentController::class, 'appointmentsApi']);
 });
 
-// Developer Routes (role: developer)
+// Developer Routes (role: developer) - Protected with auth and role middleware
 Route::middleware(['auth', 'role:developer'])->group(function () {
     Route::get('/developer/dashboard', [DeveloperDashboardController::class, 'index'])->name('developer.dashboard');
     Route::get('/developer/activity-logs', [DeveloperDashboardController::class, 'activityLogs'])->name('developer.activity-logs');
@@ -180,12 +179,7 @@ Route::middleware(['auth', 'role:developer'])->group(function () {
     Route::get('/developer/api-test', [DeveloperDashboardController::class, 'apiTest'])->name('developer.api-test');
     Route::get('/developer/system-info', [DeveloperDashboardController::class, 'systemInfo'])->name('developer.system-info');
     Route::get('/developer/database', [DeveloperDashboardController::class, 'databaseTools'])->name('developer.database');
-    Route::post('/developer/logout', [DeveloperAuthController::class, 'logout'])->name('developer.logout');
 });
-
-// Developer Auth Routes (no auth required)
-Route::get('/developer/login', [DeveloperAuthController::class, 'showLoginForm'])->name('developer.login');
-Route::post('/developer/login', [DeveloperAuthController::class, 'login'])->name('developer.login.submit');
 
 // Real-time API endpoints for live updates (public)
 Route::get('/api/track/{code}', [AppointmentController::class, 'trackByCodeApi']);

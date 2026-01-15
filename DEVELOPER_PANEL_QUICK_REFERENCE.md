@@ -4,9 +4,10 @@
 
 ### Developer Login
 ```
-URL: http://localhost:8000/developer/login
+URL: http://localhost:8000/login (same as staff)
 Email: your-dev-email@example.com
 Password: your-password
+Auto-redirects to: /developer/dashboard
 ```
 
 ### After Login
@@ -48,15 +49,15 @@ php artisan tinker
 
 ## 📍 Key URLs
 
-| Page | URL |
-|------|-----|
-| Developer Login | `/developer/login` |
-| Developer Dashboard | `/developer/dashboard` |
-| Activity Logs | `/developer/activity-logs` |
-| Log Details | `/developer/activity-logs/{id}` |
-| API Test Tool | `/developer/api-test` |
-| System Info | `/developer/system-info` |
-| Database Tools | `/developer/database` |
+| Page | URL | Note |
+|------|-----|------|
+| Unified Login | `/login` | Single login for all roles |
+| Developer Dashboard | `/developer/dashboard` | Auto-redirect after login |
+| Activity Logs | `/developer/activity-logs` | View system audit trail |
+| Log Details | `/developer/activity-logs/{id}` | Detailed log info |
+| API Test Tool | `/developer/api-test` | Test endpoints |
+| System Info | `/developer/system-info` | Config & versions |
+| Database Tools | `/developer/database` | DB management |
 
 ---
 
@@ -150,15 +151,15 @@ Sidebar options:
 ### Can't Login
 → Verify email and password  
 → Check user exists: `SELECT * FROM users WHERE email = '...';`
+→ If developer, ensure role = 'developer'
 
-### No Activity Logs
-→ Check activity_logs table: `SELECT COUNT(*) FROM activity_logs;`  
-→ Trigger an action (create/edit/delete) to generate logs
+### Not Redirecting to Developer Dashboard
+→ Check user role is 'developer': `SELECT role FROM users WHERE id = 1;`
+→ Clear browser cache and re-login
 
-### API Test Not Working
-→ Verify endpoint path starts with `/`  
-→ Check browser console for errors  
-→ Ensure target endpoint exists
+### Can't Access Developer Tools After Login
+→ Verify role is exactly 'developer' (case-sensitive)
+→ Check role middleware is enabled
 
 ---
 

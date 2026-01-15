@@ -303,7 +303,12 @@
                         </span>
                     </li>
                     <li class="nav-item">
-                        <form action="/developer/logout" method="POST" style="display: inline;">
+                        <a class="nav-link" href="/staff/appointments">
+                            <i class="fas fa-arrow-left"></i> Back to Staff
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <form action="{{ route('logout') }}" method="POST" style="display: inline;">
                             @csrf
                             <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer;">
                                 <i class="fas fa-sign-out-alt"></i> Logout

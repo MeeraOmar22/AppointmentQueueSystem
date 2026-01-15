@@ -23,6 +23,16 @@ class HomeController extends Controller
      */
     public function index()
     {
+        // Redirect developers to developer dashboard
+        if (auth()->check() && auth()->user()->role === 'developer') {
+            return redirect('/developer/dashboard');
+        }
+
+        // Redirect staff to appointments
+        if (auth()->check() && in_array(auth()->user()->role, ['staff', 'admin'])) {
+            return redirect('/staff/appointments');
+        }
+
         return view('home');
     }
 }
