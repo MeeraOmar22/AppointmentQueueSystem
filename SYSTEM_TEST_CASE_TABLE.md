@@ -231,27 +231,7 @@ Test Categories Covered:
 
 ---
 
-## Usage in FYP Document
-
-You can insert this table in **Chapter 5: Testing** or **Chapter 5.4: System Testing** section of your FYP document.
-
-**Suggested Heading:**
-```
-5.4 System Endpoint Testing
-
-A total of 35 system endpoint tests were executed to validate the complete 
-user-facing functionality of the dental clinic appointment system. The 
-following table presents representative test cases covering all major 
-system workflows.
-
-Table 5.4: Representative System Test Cases
-```
-
-Then paste the test case table above.
-
----
-
 **Test Suite:** tests/Feature/SystemEndpointTests.php  
-**File:** SYSTEM_ENDPOINT_TESTS_DOCUMENTATION.md  
+**File:** SYSTEM_TEST_CASE_TABLE.md  
 **Status:** ✅ 35/35 PASS  
 **Generated:** February 9, 2026
