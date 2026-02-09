@@ -8,27 +8,20 @@
                     @if(isset($operatingHours) && $operatingHours->isNotEmpty())
                         @php
                             $today = now()->format('l'); // Get current day name (e.g., Monday)
-                            $todayHours = $operatingHours->where('day_of_week', $today);
+                            // Filter by today's day name (single clinic only)
+                            $todayHours = $operatingHours->where('day_of_week', $today)->first();
                         @endphp
-                        @if($todayHours->isNotEmpty())
-                            @foreach($todayHours as $index => $hour)
-                                @if($hour->is_closed)
-                                    <span class="text-danger fw-bold">Closed</span>
-                                @else
-                                    @if($hour->session_label)
-                                        <span class="badge bg-light text-dark me-1">{{ $hour->session_label }}</span>
-                                    @endif
-                                    {{ date('g:i a', strtotime($hour->start_time)) }} - {{ date('g:i a', strtotime($hour->end_time)) }}
-                                    @if(!$loop->last)
-                                        <span class="mx-1">|</span>
-                                    @endif
-                                @endif
-                            @endforeach
+                        @if($todayHours)
+                            @if($todayHours->is_closed)
+                                <span class="text-danger fw-bold">Closed</span>
+                            @else
+                                {{ date('g:i a', strtotime($todayHours->start_time)) }} - {{ date('g:i a', strtotime($todayHours->end_time)) }}
+                            @endif
                         @else
                             <span class="text-muted">Not available</span>
                         @endif
                     @else
-                        Mon - Sat: 9:00 am - 9:00 pm
+                        <span class="text-muted">Not available</span>
                     @endif
                 </small>
             </div>

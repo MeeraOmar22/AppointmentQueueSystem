@@ -76,6 +76,40 @@ class OperatingHourController extends Controller
         }
 
         $hour = OperatingHour::findOrFail($id);
+        
+        // FIX #13: Warn admin if closing a day that has existing appointments
+        if ($data['is_closed'] && !$hour->is_closed) {
+            // Check if there are any future appointments on this day
+            $dayName = $data['day_of_week'];
+            $futureAppointments = \App\Models\Appointment::whereRaw("DAYNAME(appointment_date) = ?", [$dayName])
+                ->where('appointment_date', '>=', \Carbon\Carbon::today())
+                ->count();
+            
+            if ($futureAppointments > 0) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('warning', "Warning: There are {$futureAppointments} existing appointments on {$dayName}s. Closing this day may cause scheduling conflicts. Please review appointments first.");
+            }
+        }
+        
+        // FIX #13: Warn if significantly changing operating hours (may affect existing appointments)
+        if (!$data['is_closed'] && !$hour->is_closed) {
+            if ($hour->start_time !== $data['start_time'] || $hour->end_time !== $data['end_time']) {
+                $affectedCount = \App\Models\Appointment::whereRaw("DAYNAME(appointment_date) = ?", [$data['day_of_week']])
+                    ->where('appointment_date', '>=', \Carbon\Carbon::today())
+                    ->count();
+                
+                if ($affectedCount > 0) {
+                    logger()->warning('Operating hours updated - may affect appointments', [
+                        'day' => $data['day_of_week'],
+                        'old_time' => $hour->start_time . ' - ' . $hour->end_time,
+                        'new_time' => $data['start_time'] . ' - ' . $data['end_time'],
+                        'affected_appointments' => $affectedCount,
+                    ]);
+                }
+            }
+        }
+        
         $oldValues = $hour->toArray();
         $hour->update($data);
 
@@ -96,6 +130,31 @@ class OperatingHourController extends Controller
         return redirect('/staff/operating-hours')->with('success', 'Operating hour deleted successfully.');
     }
 
+    /**
+     * Toggle is_closed status via PATCH (for quick-toggle in system config)
+     */
+    public function toggleStatus(Request $request, $id)
+    {
+        $hour = OperatingHour::findOrFail($id);
+        
+        $isClosed = $request->input('is_closed', false);
+        $oldValue = $hour->is_closed;
+        
+        $hour->is_closed = (bool) $isClosed;
+        $hour->save();
+
+        ActivityLogger::log('updated', 'OperatingHour', $hour->id, "Toggled is_closed status for {$hour->day_of_week}", ['is_closed' => $oldValue], ['is_closed' => $isClosed]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Operating hour status updated',
+            'data' => [
+                'id' => $hour->id,
+                'is_closed' => $hour->is_closed,
+            ]
+        ]);
+    }
+
     public function bulkDestroy(Request $request)
     {
         $ids = $request->validate([
@@ -108,5 +167,24 @@ class OperatingHourController extends Controller
         OperatingHour::whereIn('id', $ids['ids'])->delete();
 
         return redirect('/staff/operating-hours')->with('success', count($ids['ids']) . ' operating hours deleted successfully.');
+    }
+
+    public function stats()
+    {
+        $hours = OperatingHour::all();
+
+        return response()->json([
+            'data' => $hours->map(function (OperatingHour $hour) {
+                return [
+                    'id' => $hour->id,
+                    'day_of_week' => $hour->day_of_week,
+                    'session_label' => $hour->session_label ?? '',
+                    'opening_time' => $hour->start_time,
+                    'closing_time' => $hour->end_time,
+                    'status' => $hour->is_closed ? 'closed' : 'open',
+                    'is_active' => !$hour->is_closed,
+                ];
+            }),
+        ]);
     }
 }

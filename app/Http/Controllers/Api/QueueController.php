@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Queue;
 use App\Models\Room;
+use App\Models\Dentist;
 use App\Services\CheckInService;
 use App\Services\QueueAssignmentService;
 use App\Services\LateNoShowService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class QueueController extends Controller
 {
@@ -41,27 +43,44 @@ class QueueController extends Controller
         // Check if patient is late
         if ($checkInService->isLate($appointment)) {
             $queue = $checkInService->checkInLate($appointment);
+            
+            // Get queue pause status
+            $queueSettings = DB::table('queue_settings')->first();
+            $isPaused = $queueSettings?->is_paused ?? false;
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Patient checked in as LATE',
                 'queue' => $queue->load('appointment', 'room', 'dentist'),
                 'status' => 'late',
+                'queue_paused' => $isPaused,
+                'queue_number' => $queue->queue_number,
+                'pause_message' => $isPaused ? 'Queue is currently paused. You are #' . $queue->queue_number . ' in queue. Staff will call you when queue resumes.' : null,
             ]);
         }
 
         // Normal check-in
         $queue = $checkInService->checkIn($appointment);
 
+        // Get queue pause status
+        $queueSettings = DB::table('queue_settings')->first();
+        $isPaused = $queueSettings?->is_paused ?? false;
+
         return response()->json([
             'success' => true,
             'message' => 'Patient checked in successfully',
             'queue' => $queue->load('appointment', 'room', 'dentist'),
             'status' => 'checked_in',
+            'queue_paused' => $isPaused,
+            'queue_number' => $queue->queue_number,
+            'pause_message' => $isPaused ? 'Queue is currently paused. You are #' . $queue->queue_number . ' in queue. Staff will call you when queue resumes.' : null,
         ]);
     }
 
     /**
      * Get next patient to be called
+     * ENFORCES FIFO: Automatically selects lowest queue number
+     * ENFORCES AVAILABILITY: Returns error if no dentist/room available
      * 
      * GET /api/queue/next?clinic_location=seremban
      */
@@ -72,16 +91,34 @@ class QueueController extends Controller
         $queue = $assignmentService->assignNextPatient($clinicLocation);
 
         if (!$queue) {
+            // Check why no patient could be assigned
+            $dentistCount = Dentist::where('status', true)->count();
+            $roomCount = Room::where('clinic_location', $clinicLocation)
+                ->where('status', 'available')
+                ->count();
+            
+            $reasons = [];
+            if ($dentistCount === 0) {
+                $reasons[] = 'No dentist available (status=available)';
+            }
+            if ($roomCount === 0) {
+                $reasons[] = 'No room available (status=available)';
+            }
+            if (empty($reasons)) {
+                $reasons[] = 'No waiting patients available';
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'No waiting patients available',
+                'message' => implode(', ', $reasons),
                 'queue' => null,
-            ]);
+                'reasons' => $reasons,
+            ], 400);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Next patient assigned',
+            'message' => 'Next patient assigned (Queue #' . $queue->queue_number . ')',
             'queue' => $queue->load('appointment', 'room', 'dentist'),
         ]);
     }

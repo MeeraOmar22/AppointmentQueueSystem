@@ -1,0 +1,415 @@
+/**
+ * Real-Time Dashboard Styles
+ * Toast notifications, animations, and visual feedback
+ */
+
+/* Notification Container */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+}
+
+/* Toast Notifications */
+.toast {
+    display: none;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease-in-out;
+    margin-bottom: 10px;
+    border: none;
+    border-left: 4px solid;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.toast.show {
+    display: block;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Toast Variants */
+.notification-success {
+    background-color: #d4edda;
+    border-left-color: #28a745;
+}
+
+.notification-success .toast-header {
+    background-color: #c3e6cb;
+    color: #155724;
+}
+
+.notification-success .toast-body {
+    color: #155724;
+}
+
+.notification-success i {
+    color: #28a745;
+}
+
+.notification-info {
+    background-color: #d1ecf1;
+    border-left-color: #17a2b8;
+}
+
+.notification-info .toast-header {
+    background-color: #bee5eb;
+    color: #0c5460;
+}
+
+.notification-info .toast-body {
+    color: #0c5460;
+}
+
+.notification-info i {
+    color: #17a2b8;
+}
+
+.notification-warning {
+    background-color: #fff3cd;
+    border-left-color: #ffc107;
+}
+
+.notification-warning .toast-header {
+    background-color: #ffeaa7;
+    color: #856404;
+}
+
+.notification-warning .toast-body {
+    color: #856404;
+}
+
+.notification-warning i {
+    color: #ffc107;
+}
+
+.notification-error,
+.notification-danger {
+    background-color: #f8d7da;
+    border-left-color: #dc3545;
+}
+
+.notification-error .toast-header,
+.notification-danger .toast-header {
+    background-color: #f5c6cb;
+    color: #721c24;
+}
+
+.notification-error .toast-body,
+.notification-danger .toast-body {
+    color: #721c24;
+}
+
+.notification-error i,
+.notification-danger i {
+    color: #dc3545;
+}
+
+/* Toast Header */
+.toast-header {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.toast-header strong {
+    flex-grow: 1;
+}
+
+.toast-header small {
+    opacity: 0.7;
+    font-size: 0.85rem;
+}
+
+.toast-header i {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Toast Body */
+.toast-body {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.toast-body p {
+    margin-bottom: 0.25rem;
+}
+
+/* Table Row Highlight */
+tr[id^="appointment-"].highlight {
+    background-color: #fff3cd !important;
+    animation: highlightPulse 1.5s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: #fff3cd;
+    }
+    50% {
+        background-color: #fffacd;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Slide In Animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Queue Display */
+.queue-display {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    padding: 15px;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease-in-out;
+}
+
+.queue-item.current {
+    background: #e7f3ff;
+    border-color: #0066cc;
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
+}
+
+.queue-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.queue-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.queue-item.current .queue-number {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    animation: pulse 1.5s infinite;
+}
+
+.queue-details {
+    flex-grow: 1;
+}
+
+.queue-patient {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.queue-status {
+    display: flex;
+    gap: 5px;
+}
+
+.queue-status .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.queue-time {
+    text-align: right;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Statistics Cards Animation */
+.stats-card {
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stats-card h4 {
+    transition: all 0.3s ease;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* Real-time Indicator */
+.realtime-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 12px;
+}
+
+.realtime-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #4caf50;
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 49%, 100% {
+        opacity: 1;
+    }
+    50%, 99% {
+        opacity: 0.3;
+    }
+}
+
+/* Loading State */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #667eea;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Action Buttons */
+.btn-action {
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    transform: scale(1.05);
+}
+
+.btn-action:active {
+    transform: scale(0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+
+    .toast {
+        margin-bottom: 8px;
+    }
+
+    .queue-display {
+        grid-template-columns: 1fr;
+    }
+
+    .queue-item {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .queue-number {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+
+    .queue-time {
+        text-align: center;
+        min-width: auto;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .toast,
+    .queue-item,
+    .notification-container,
+    .realtime-indicator::before {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .notification-container,
+    .toast {
+        display: none !important;
+    }
+}

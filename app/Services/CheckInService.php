@@ -11,6 +11,7 @@ class CheckInService
 {
     /**
      * Process patient check-in
+     * FIXED: Now uses pessimistic locking to prevent concurrent duplicate check-ins
      * 
      * @param Appointment $appointment
      * @return Queue|null
@@ -18,40 +19,57 @@ class CheckInService
     public function checkIn(Appointment $appointment): ?Queue
     {
         return DB::transaction(function () use ($appointment) {
+            // FIXED: Use lockForUpdate() on appointment to prevent concurrent check-in attempts
+            // This ensures only ONE check-in succeeds for a given appointment
+            $lockedAppointment = Appointment::lockForUpdate()->findOrFail($appointment->id);
+            
             // Mark appointment as arrived
-            $appointment->markArrived();
+            $lockedAppointment->markArrived();
 
-            // Create or update queue entry
-            $queue = $appointment->queue;
+            // Get or create queue entry (ONE record per appointment only)
+            $queue = $lockedAppointment->queue;
             
             if (!$queue) {
-                // Create new queue entry
+                // Create new queue entry (ONLY on first check-in)
+                // FIXED: Use atomic nextNumberForDate() with row locking
                 $queue = Queue::create([
-                    'appointment_id' => $appointment->id,
-                    'queue_number' => Queue::nextNumberForDate($appointment->appointment_date),
+                    'appointment_id' => $lockedAppointment->id,
+                    'queue_number' => Queue::nextNumberForDate($lockedAppointment->appointment_date),
                     'queue_status' => 'waiting',
                     'check_in_time' => now(),
                 ]);
             } else {
-                // Update existing queue entry
-                $queue->update([
-                    'check_in_time' => now(),
-                    'queue_status' => 'checked_in',
-                ]);
+                // Queue already exists: validate it's still in correct state
+                // Re-validate eligibility even on duplicate (not just logging)
+                if (!$this->validateCheckIn($lockedAppointment)['valid']) {
+                    return null;
+                }
+                
+                // Duplicate check-in detected: ignore and return existing queue
+                ActivityLogger::log(
+                    'duplicate_check_in_ignored',
+                    'Appointment',
+                    $lockedAppointment->id,
+                    'Patient ' . $lockedAppointment->patient_name . ' attempted to check in again (ignored)',
+                    null,
+                    ['queue_number' => $queue->queue_number, 'status' => 'duplicate']
+                );
+                return $queue;
             }
 
             // Log the check-in activity
             ActivityLogger::log(
                 'checked_in',
                 'Appointment',
-                $appointment->id,
-                'Patient ' . $appointment->patient_name . ' checked in',
+                $lockedAppointment->id,
+                'Patient ' . $lockedAppointment->patient_name . ' checked in',
                 null,
-                ['queue_number' => $queue->queue_number, 'status' => 'checked_in']
+                ['queue_number' => $queue->queue_number, 'status' => 'waiting']
             );
 
             return $queue;
-        });
+        }, 3); // Retry on deadlock
+
     }
 
     /**
@@ -64,6 +82,12 @@ class CheckInService
     {
         $errors = [];
 
+        // Check if queue is paused
+        $queueSettings = DB::table('queue_settings')->first();
+        if ($queueSettings && $queueSettings->is_paused) {
+            $errors[] = 'Queue is currently paused. Please wait for queue to resume before checking in.';
+        }
+
         // Check if appointment exists
         if (!$appointment) {
             $errors[] = 'Appointment not found';
@@ -75,18 +99,29 @@ class CheckInService
             $errors[] = 'This appointment is not for today';
         }
 
+        // Check if check-in is outside 30-minute window
+        $appointmentTime = $appointment->appointment_date->setTimeFromTimeString($appointment->appointment_time);
+        $now = now();
+        $minutesUntilAppointment = $now->diffInMinutes($appointmentTime);
+        
+        // If current time is more than 30 minutes BEFORE appointment, don't allow check-in yet
+        if ($now < $appointmentTime && $minutesUntilAppointment > 30) {
+            $timeUntil = $appointmentTime->format('g:i A');
+            $errors[] = "Check-in opens 30 minutes before your appointment. Your appointment is at $timeUntil. Please check in after " . $appointmentTime->copy()->subMinutes(30)->format('g:i A') . '.';
+        }
+
         // Check if already checked in
         if ($appointment->hasCheckedIn()) {
-            $errors[] = 'Patient has already checked in';
+            $errors[] = 'You have already checked in';
         }
 
         // Check if appointment is cancelled
-        if ($appointment->status === 'cancelled') {
+        if ($appointment->status->value === 'cancelled') {
             $errors[] = 'This appointment has been cancelled';
         }
 
         // Check if appointment is marked as no-show
-        if ($appointment->status === 'no_show') {
+        if ($appointment->status->value === 'no_show') {
             $errors[] = 'This appointment was marked as no-show';
         }
 

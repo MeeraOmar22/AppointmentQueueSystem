@@ -19,7 +19,13 @@ class AppointmentConfirmation extends Mailable
      */
     public function __construct(public Appointment $appointment, public string $patientName)
     {
-        //
+        // Ensure service and dentist relationships are loaded
+        if (!$this->appointment->relationLoaded('service')) {
+            $this->appointment->load('service');
+        }
+        if (!$this->appointment->relationLoaded('dentist')) {
+            $this->appointment->load('dentist');
+        }
     }
 
     /**
@@ -37,8 +43,8 @@ class AppointmentConfirmation extends Mailable
      */
     public function content(): Content
     {
+        // Use visit_code for tracking URL (matches WhatsApp and consistent with API)
         $trackingUrl = url('/track/' . $this->appointment->visit_code);
-        $checkinUrl = url('/checkin?code=' . $this->appointment->visit_code);
         
         return new Content(
             view: 'emails.appointment-confirmation',
@@ -46,7 +52,6 @@ class AppointmentConfirmation extends Mailable
                 'name' => $this->patientName,
                 'appointment' => $this->appointment,
                 'trackingUrl' => $trackingUrl,
-                'checkinUrl' => $checkinUrl,
             ],
         );
     }

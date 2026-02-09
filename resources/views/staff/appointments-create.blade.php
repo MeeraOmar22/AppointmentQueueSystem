@@ -133,18 +133,46 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-                        <select class="form-select @error('status') is-invalid @enderror" name="status" required>
-                            <option value="booked" {{ old('status', 'booked') == 'booked' ? 'selected' : '' }}>Booked</option>
-                            <option value="checked_in" {{ old('status') == 'checked_in' ? 'selected' : '' }}>Checked In</option>
-                            <option value="in_treatment" {{ old('status') == 'in_treatment' ? 'selected' : '' }}>In Treatment</option>
-                            <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        <label class="form-label fw-semibold">Initial Status <span class="text-danger">*</span></label>
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>FIX #3:</strong> New appointments MUST start in "Booked" status.
+                            <br>
+                            <small>Staff can only transition through valid states: booked → confirmed → checked_in → waiting → in_treatment → completed</small>
+                        </div>
+                        <input type="hidden" name="status" value="booked">
+                        <select class="form-select" id="statusDisplay" disabled>
+                            <option selected>Booked (Auto-selected for new appointments)</option>
                         </select>
-                        @error('status')
+                        <small class="text-muted d-block mt-2">
+                            Once created, use the appointment detail page to transition through states.
+                        </small>
+                    </div>
+
+                    <div class="mb-4" id="cancellationReasonField" style="display: none;">
+                        <label class="form-label fw-semibold">Cancellation Reason</label>
+                        <textarea class="form-control @error('cancellation_reason') is-invalid @enderror" 
+                                  name="cancellation_reason" rows="3" 
+                                  placeholder="Optional: Explain why this appointment is being cancelled. This will be sent to the patient.">{{ old('cancellation_reason') }}</textarea>
+                        <small class="text-muted d-block mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            If provided, this reason will be included in the cancellation WhatsApp message sent to the patient.
+                        </small>
+                        @error('cancellation_reason')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <script>
+                        document.getElementById('statusSelect').addEventListener('change', function() {
+                            const field = document.getElementById('cancellationReasonField');
+                            if (this.value === 'cancelled') {
+                                field.style.display = 'block';
+                            } else {
+                                field.style.display = 'none';
+                            }
+                        });
+                    </script>
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">

@@ -16,7 +16,20 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call([
+            // Core data seeders (order matters)
+            DentistSeeder::class,
+            DentistScheduleSeeder::class,
+            RoomSeeder::class,
+            ServiceSeeder::class,
+            AppointmentSeeder::class,
+            
+            // User account seeders
+            DemoPatientSeeder::class,
+            DeveloperUserSeeder::class,
+            
+            // Existing seeders
             InitialDataSeeder::class,
+            TestDataSeeder::class,
         ]);
     }
 }

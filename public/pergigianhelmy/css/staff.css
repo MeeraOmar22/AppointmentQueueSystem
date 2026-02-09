@@ -112,18 +112,28 @@ body {
 }
 
 .badge-waiting {
-    background: rgba(245, 126, 87, 0.15);
-    color: #F57E57;
+    background-color: #FFF3E0 !important;
+    color: #E65100 !important;
+}
+
+.badge-called {
+    background-color: #FFEBEE !important;
+    color: #C62828 !important;
+}
+
+.badge-intreatment {
+    background-color: #E0F2F1 !important;
+    color: #004D40 !important;
 }
 
 .badge-inservice {
-    background: rgba(6, 163, 218, 0.15);
-    color: #06A3DA;
+    background-color: #E0F2F1 !important;
+    color: #004D40 !important;
 }
 
 .badge-completed {
-    background: rgba(25, 135, 84, 0.15);
-    color: #198754;
+    background-color: #E8F5E9 !important;
+    color: #1B5E20 !important;
 }
 
 .btn-primary {

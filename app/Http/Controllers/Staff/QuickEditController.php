@@ -17,6 +17,11 @@ class QuickEditController
      */
     public function index()
     {
+        // Admin/Developer only
+        if (!in_array(auth()->user()->role, ['admin', 'developer'])) {
+            abort(403, 'Unauthorized');
+        }
+        
         $dentists = Dentist::withCount('appointments')->get();
         $services = Service::withCount('appointments')->get();
         $staff = User::where('role', 'staff')->get();

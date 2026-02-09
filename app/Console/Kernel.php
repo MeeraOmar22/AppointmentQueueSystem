@@ -17,6 +17,10 @@ class Kernel extends ConsoleKernel
 
         // Send 24-hour reminders at 10:00 AM for appointments tomorrow
         $schedule->command('appointments:send-reminders-24h')->dailyAt('10:00');
+
+        // Send feedback links to completed appointments every 5 minutes
+        // Checks for appointments completed 1 hour ago (with ±5 minute window)
+        $schedule->command('feedback:send-links')->everyFiveMinutes();
     }
 
     protected function commands(): void

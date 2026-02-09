@@ -7,8 +7,10 @@ use App\Models\Appointment;
 use App\Models\Feedback;
 use App\Models\Dentist;
 use App\Models\Service;
+use App\Enums\AppointmentStatus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -22,11 +24,11 @@ class ReportController extends Controller
 
         // Appointment Statistics
         $totalAppointments = Appointment::whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
-        $completedAppointments = Appointment::where('appointments.status', 'completed')
+        $completedAppointments = Appointment::where('status', AppointmentStatus::COMPLETED->value)
             ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
-        $cancelledAppointments = Appointment::where('appointments.status', 'cancelled')
+        $cancelledAppointments = Appointment::where('status', AppointmentStatus::CANCELLED->value)
             ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
-        $noShowAppointments = Appointment::where('appointments.status', 'no_show')
+        $noShowAppointments = Appointment::where('status', AppointmentStatus::NO_SHOW->value)
             ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
 
         $appointmentCompletionRate = $totalAppointments > 0 
@@ -36,8 +38,8 @@ class ReportController extends Controller
         // Revenue Analysis
         $revenueData = Appointment::select('services.name', 'services.price')
             ->with('service')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
             ->join('services', 'appointments.service_id', '=', 'services.id')
             ->groupBy('services.id', 'services.name', 'services.price')
             ->selectRaw('services.name, services.price, COUNT(*) as count, (services.price * COUNT(*)) as total_revenue')
@@ -48,8 +50,8 @@ class ReportController extends Controller
 
         // Dentist Performance
         $dentistPerformance = Appointment::select('dentists.id', 'dentists.name')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
             ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
             ->groupBy('dentists.id', 'dentists.name')
             ->selectRaw('dentists.id, dentists.name, COUNT(*) as appointments_completed')
@@ -58,8 +60,8 @@ class ReportController extends Controller
 
         // Service Popularity
         $servicePopularity = Appointment::select('services.name')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
             ->join('services', 'appointments.service_id', '=', 'services.id')
             ->groupBy('services.id', 'services.name')
             ->selectRaw('services.name, COUNT(*) as count')
@@ -115,9 +117,9 @@ class ReportController extends Controller
 
         // Get counts for statistics
         $countQuery = Appointment::whereBetween('appointment_date', [$dateFrom, $dateTo]);
-        $completedCount = (clone $countQuery)->where('status', 'completed')->count();
-        $cancelledCount = (clone $countQuery)->where('status', 'cancelled')->count();
-        $noShowCount = (clone $countQuery)->where('status', 'no_show')->count();
+        $completedCount = (clone $countQuery)->where('status', AppointmentStatus::COMPLETED->value)->count();
+        $cancelledCount = (clone $countQuery)->where('status', AppointmentStatus::CANCELLED->value)->count();
+        $noShowCount = (clone $countQuery)->where('status', AppointmentStatus::NO_SHOW->value)->count();
         
         // Get all dentists for filter dropdown
         $dentists = Dentist::where('status', true)->orderBy('name')->get();
@@ -142,7 +144,7 @@ class ReportController extends Controller
         $dateTo = $request->query('date_to', now()->format('Y-m-d'));
 
         $revenueByService = Appointment::select('services.name', 'services.price')
-            ->where('appointments.status', 'completed')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
             ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
             ->join('services', 'appointments.service_id', '=', 'services.id')
             ->groupBy('services.id', 'services.name', 'services.price')
@@ -153,7 +155,7 @@ class ReportController extends Controller
         $totalRevenue = $revenueByService->sum('total_revenue');
         
         // Total appointments (completed only for revenue)
-        $totalAppointments = Appointment::where('appointments.status', 'completed')
+        $totalAppointments = Appointment::where('status', AppointmentStatus::COMPLETED->value)
             ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
         
         // Average revenue per appointment
@@ -163,8 +165,8 @@ class ReportController extends Controller
 
         // Revenue by dentist
         $revenueByDentist = Appointment::select('dentists.id', 'dentists.name')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointments.appointment_date', [$dateFrom, $dateTo])
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
             ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
             ->join('services', 'appointments.service_id', '=', 'services.id')
             ->groupBy('dentists.id', 'dentists.name')
@@ -213,7 +215,7 @@ class ReportController extends Controller
                     $appointment->service->name ?? 'N/A',
                     $appointment->dentist->name ?? 'N/A',
                     $appointment->patient_name ?? 'N/A',
-                    $appointment->status,
+                    $appointment->status->value ?? $appointment->status,
                     $appointment->service->price ?? 0
                 ]);
             }
@@ -225,8 +227,346 @@ class ReportController extends Controller
     }
 
     /**
-     * Show at-risk patients (patient retention analytics)
+     * Export appointments to PDF
      */
+    public function exportAppointmentsPdf(Request $request)
+    {
+        $dateFrom = $request->query('date_from', now()->subMonths(3)->format('Y-m-d'));
+        $dateTo = $request->query('date_to', now()->format('Y-m-d'));
+
+        $appointments = Appointment::with(['dentist', 'service'])
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->orderBy('appointment_date', 'desc')
+            ->get();
+
+        $totalRevenue = $appointments->sum(function ($apt) {
+            return $apt->service->price ?? 0;
+        });
+
+        $data = [
+            'appointments' => $appointments,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'totalRevenue' => $totalRevenue,
+            'generatedAt' => now()->format('M d, Y H:i A'),
+            'totalAppointments' => $appointments->count(),
+            'completedAppointments' => $appointments->where('status', 'completed')->count(),
+            'cancelledAppointments' => $appointments->where('status', 'cancelled')->count(),
+        ];
+
+        $pdf = Pdf::loadView('staff.reports.pdf.appointments-export', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 10)
+            ->setOption('margin-right', 10);
+
+        return $pdf->download('appointments_report_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export revenue report to PDF
+     */
+    public function exportRevenuePdf(Request $request)
+    {
+        $dateFrom = $request->query('date_from', now()->subMonths(1)->format('Y-m-d'));
+        $dateTo = $request->query('date_to', now()->format('Y-m-d'));
+
+        $revenueByService = Appointment::select('services.name', 'services.price')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('services.id', 'services.name', 'services.price')
+            ->selectRaw('services.name, services.price, COUNT(*) as count, (services.price * COUNT(*)) as total_revenue')
+            ->orderByRaw('total_revenue DESC')
+            ->get();
+
+        $totalRevenue = $revenueByService->sum('total_revenue');
+        $totalAppointments = Appointment::where('appointments.appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])->count();
+        
+        $averagePerAppointment = $totalAppointments > 0 
+            ? round($totalRevenue / $totalAppointments, 2) 
+            : 0;
+
+        $revenueByDentist = Appointment::select('dentists.id', 'dentists.name')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('dentists.id', 'dentists.name')
+            ->selectRaw('dentists.id, dentists.name, COUNT(*) as completed_appointments, SUM(services.price) as total_revenue')
+            ->orderByRaw('total_revenue DESC')
+            ->get();
+
+        $data = [
+            'revenueByService' => $revenueByService,
+            'revenueByDentist' => $revenueByDentist,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'totalRevenue' => $totalRevenue,
+            'totalAppointments' => $totalAppointments,
+            'averagePerAppointment' => $averagePerAppointment,
+            'generatedAt' => now()->format('M d, Y H:i A'),
+        ];
+
+        $pdf = Pdf::loadView('staff.reports.pdf.revenue-export', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 10)
+            ->setOption('margin-right', 10);
+
+        return $pdf->download('revenue_report_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export comprehensive report with all 4 analytics (Appointments, Revenue, Retention, Scheduling)
+     */
+    public function exportComprehensiveReportPdf(Request $request)
+    {
+        $timePeriod = $request->query('period', 'monthly'); // daily, weekly, monthly
+        
+        // Calculate date range based on period
+        if ($timePeriod === 'daily') {
+            $dateFrom = now()->format('Y-m-d');
+            $dateTo = now()->format('Y-m-d');
+            $periodLabel = 'Today';
+        } elseif ($timePeriod === 'weekly') {
+            $dateFrom = now()->startOfWeek()->format('Y-m-d');
+            $dateTo = now()->endOfWeek()->format('Y-m-d');
+            $periodLabel = 'This Week';
+        } else { // monthly
+            $dateFrom = now()->startOfMonth()->format('Y-m-d');
+            $dateTo = now()->endOfMonth()->format('Y-m-d');
+            $periodLabel = now()->format('F Y');
+        }
+
+        // 1. APPOINTMENT ANALYSIS
+        $appointments = Appointment::with(['dentist', 'service'])
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->get();
+        
+        $appointmentStats = [
+            'total' => $appointments->count(),
+            'completed' => $appointments->where('status', AppointmentStatus::COMPLETED->value)->count(),
+            'cancelled' => $appointments->where('status', AppointmentStatus::CANCELLED->value)->count(),
+            'noShow' => $appointments->where('status', AppointmentStatus::NO_SHOW->value)->count(),
+        ];
+
+        // 2. REVENUE REPORT
+        $revenueByService = Appointment::select('services.name', 'services.price')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('services.id', 'services.name', 'services.price')
+            ->selectRaw('services.name, services.price, COUNT(*) as count, (services.price * COUNT(*)) as total_revenue')
+            ->orderByRaw('total_revenue DESC')
+            ->get();
+
+        $totalRevenue = $revenueByService->sum('total_revenue');
+        $averagePerAppointment = $appointmentStats['completed'] > 0 ? round($totalRevenue / $appointmentStats['completed'], 2) : 0;
+
+        $revenueByDentist = Appointment::select('dentists.id', 'dentists.name')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->groupBy('dentists.id', 'dentists.name')
+            ->selectRaw('dentists.id, dentists.name, COUNT(*) as completed_appointments, SUM(services.price) as total_revenue')
+            ->orderByRaw('total_revenue DESC')
+            ->get();
+
+        // 3. PATIENT RETENTION (at-risk patients)
+        $allPatients = Appointment::distinct('patient_phone')
+            ->select('patient_name', 'patient_phone', 'patient_email')
+            ->orderBy('patient_name')
+            ->get();
+
+        $atRiskPatients = [];
+        $loyalPatients = [];
+
+        foreach ($allPatients as $patient) {
+            $patientAppointments = Appointment::where('patient_phone', $patient->patient_phone)
+                ->orderBy('appointment_date', 'desc')
+                ->get();
+
+            if ($patientAppointments->isEmpty()) continue;
+
+            $totalAppointments = $patientAppointments->count();
+            $completedAppointments = $patientAppointments->where('status', 'completed')->count();
+            $cancelledAppointments = $patientAppointments->where('status', 'cancelled')->count();
+            $noShowAppointments = $patientAppointments->where('status', 'no_show')->count();
+
+            $lastAppointmentDate = $patientAppointments->first()->appointment_date;
+            $daysSinceLastVisit = now()->diffInDays($lastAppointmentDate);
+            $cancelRate = $totalAppointments > 0 ? ($cancelledAppointments + $noShowAppointments) / $totalAppointments : 0;
+
+            $riskScore = 0;
+            if ($daysSinceLastVisit > 180) $riskScore += 40;
+            elseif ($daysSinceLastVisit > 90) $riskScore += 20;
+            if ($cancelRate > 0.3) $riskScore += 25;
+            elseif ($cancelRate > 0.15) $riskScore += 15;
+
+            if ($riskScore >= 25) {
+                $atRiskPatients[] = [
+                    'name' => $patient->patient_name,
+                    'lastVisit' => $lastAppointmentDate->format('M d, Y'),
+                    'daysSince' => $daysSinceLastVisit,
+                    'riskScore' => $riskScore,
+                ];
+            } else {
+                $loyalPatients[] = [
+                    'name' => $patient->patient_name,
+                    'totalAppointments' => $totalAppointments,
+                ];
+            }
+        }
+
+        usort($atRiskPatients, function ($a, $b) {
+            return $b['riskScore'] <=> $a['riskScore'];
+        });
+
+        // 4. SCHEDULING ANALYSIS
+        $appointmentsByHour = Appointment::selectRaw('HOUR(appointment_time) as hour, COUNT(*) as count')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->get();
+
+        $hourlyDistribution = [];
+        for ($i = 8; $i <= 17; $i++) {
+            $hour = str_pad($i, 2, '0', STR_PAD_LEFT);
+            $count = $appointmentsByHour->where('hour', $i)->first()?->count ?? 0;
+            $hourlyDistribution[] = [
+                'hour' => $hour . ':00',
+                'count' => $count,
+            ];
+        }
+
+        $dentistUtilization = Appointment::selectRaw('dentists.id, dentists.name, COUNT(*) as appointments_count')
+            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
+            ->where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->groupBy('dentists.id', 'dentists.name')
+            ->orderByRaw('COUNT(*) DESC')
+            ->get();
+
+        $totalCompletedAppointments = Appointment::where('appointments.status', AppointmentStatus::COMPLETED->value)
+            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
+            ->count();
+
+        foreach ($dentistUtilization as $dentist) {
+            $dentist->utilization_percentage = $totalCompletedAppointments > 0
+                ? round(($dentist->appointments_count / $totalCompletedAppointments) * 100, 1)
+                : 0;
+        }
+
+        $data = [
+            'timePeriod' => $timePeriod,
+            'periodLabel' => $periodLabel,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'generatedAt' => now()->format('M d, Y H:i A'),
+            
+            // Appointment Analysis
+            'appointmentStats' => $appointmentStats,
+            'appointments' => $appointments,
+            
+            // Revenue Report
+            'revenueByService' => $revenueByService,
+            'revenueByDentist' => $revenueByDentist,
+            'totalRevenue' => $totalRevenue,
+            'averagePerAppointment' => $averagePerAppointment,
+            
+            // Patient Retention
+            'atRiskPatients' => $atRiskPatients,
+            'loyalPatients' => $loyalPatients,
+            'atRiskCount' => count($atRiskPatients),
+            'loyalCount' => count($loyalPatients),
+            'totalPatients' => count($atRiskPatients) + count($loyalPatients),
+            
+            // Scheduling Analysis
+            'hourlyDistribution' => $hourlyDistribution,
+            'dentistUtilization' => $dentistUtilization,
+        ];
+
+        $pdf = Pdf::loadView('staff.reports.pdf.comprehensive-report', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 10)
+            ->setOption('margin-right', 10)
+            ->setOption('dpi', 300);
+
+        return $pdf->download('comprehensive_report_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Show queue analytics report
+     */
+    public function queueAnalytics(Request $request)
+    {
+        $dateFrom = $request->query('date_from', now()->subMonths(1)->format('Y-m-d'));
+        $dateTo = $request->query('date_to', now()->format('Y-m-d'));
+
+        $analyticsService = new \App\Services\QueueAnalyticsService();
+
+        $waitTimeAnalysis = $analyticsService->getWaitTimeAnalysis($dateFrom, $dateTo);
+        $treatmentAnalysis = $analyticsService->getTreatmentDurationAnalysis($dateFrom, $dateTo);
+        $roomUtilization = $analyticsService->getRoomUtilization($dateFrom, $dateTo);
+        $queueEfficiency = $analyticsService->getQueueEfficiency($dateFrom, $dateTo);
+        $peakHours = $analyticsService->getPeakHoursAnalysis($dateFrom, $dateTo);
+
+        return view('staff.reports.queue-analytics', compact(
+            'dateFrom',
+            'dateTo',
+            'waitTimeAnalysis',
+            'treatmentAnalysis',
+            'roomUtilization',
+            'queueEfficiency',
+            'peakHours'
+        ));
+    }
+
+    /**
+     * Export queue analytics report to PDF
+     */
+    public function exportQueueAnalyticsPdf(Request $request)
+    {
+        $dateFrom = $request->query('date_from', now()->subMonths(1)->format('Y-m-d'));
+        $dateTo = $request->query('date_to', now()->format('Y-m-d'));
+
+        $analyticsService = new \App\Services\QueueAnalyticsService();
+
+        $waitTimeAnalysis = $analyticsService->getWaitTimeAnalysis($dateFrom, $dateTo);
+        $treatmentAnalysis = $analyticsService->getTreatmentDurationAnalysis($dateFrom, $dateTo);
+        $roomUtilization = $analyticsService->getRoomUtilization($dateFrom, $dateTo);
+        $queueEfficiency = $analyticsService->getQueueEfficiency($dateFrom, $dateTo);
+        $peakHours = $analyticsService->getPeakHoursAnalysis($dateFrom, $dateTo);
+
+        $data = [
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'waitTimeAnalysis' => $waitTimeAnalysis,
+            'treatmentAnalysis' => $treatmentAnalysis,
+            'roomUtilization' => $roomUtilization,
+            'queueEfficiency' => $queueEfficiency,
+            'peakHours' => $peakHours,
+            'generatedAt' => now()->format('M d, Y H:i A'),
+        ];
+
+        $pdf = Pdf::loadView('staff.reports.pdf.queue-analytics-export', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 10)
+            ->setOption('margin-right', 10);
+
+        return $pdf->download('queue_analytics_report_' . now()->format('Y-m-d') . '.pdf');
+    }
+
     public function patientRetention()
     {
         // Get all unique patients
@@ -249,9 +589,9 @@ class ReportController extends Controller
             }
 
             $totalAppointments = $appointments->count();
-            $completedAppointments = $appointments->where('status', 'completed')->count();
-            $cancelledAppointments = $appointments->where('status', 'cancelled')->count();
-            $noShowAppointments = $appointments->where('status', 'no_show')->count();
+            $completedAppointments = $appointments->where('status', AppointmentStatus::COMPLETED->value)->count();
+            $cancelledAppointments = $appointments->where('status', AppointmentStatus::CANCELLED->value)->count();
+            $noShowAppointments = $appointments->where('status', AppointmentStatus::NO_SHOW->value)->count();
             
             // Calculate metrics
             $lastAppointmentDate = $appointments->first()->appointment_date;
@@ -353,230 +693,5 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Show appointment duration and scheduling optimization analytics
-     */
-    public function schedulingOptimization(Request $request)
-    {
-        $dateFrom = $request->query('date_from', now()->subMonths(3)->format('Y-m-d'));
-        $dateTo = $request->query('date_to', now()->format('Y-m-d'));
 
-        // Appointment Duration Analysis
-        $appointments = Appointment::with(['dentist', 'service'])
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->whereNotNull('start_at')
-            ->whereNotNull('end_at')
-            ->get();
-
-        $durationStats = [
-            'totalAppointments' => 0,
-            'averageDuration' => 0,
-            'minDuration' => null,
-            'maxDuration' => null,
-            'byService' => [],
-            'byDentist' => []
-        ];
-
-        $appointmentsByService = [];
-        $appointmentsByDentist = [];
-
-        foreach ($appointments as $apt) {
-            if ($apt->start_at && $apt->end_at && $apt->end_at > $apt->start_at) {
-                $duration = $apt->start_at->diffInMinutes($apt->end_at);
-                
-                // Track by service
-                if (!isset($appointmentsByService[$apt->service->name])) {
-                    $appointmentsByService[$apt->service->name] = [
-                        'service_id' => $apt->service_id,
-                        'name' => $apt->service->name,
-                        'count' => 0,
-                        'totalDuration' => 0,
-                        'durations' => []
-                    ];
-                }
-                $appointmentsByService[$apt->service->name]['count']++;
-                $appointmentsByService[$apt->service->name]['totalDuration'] += $duration;
-                $appointmentsByService[$apt->service->name]['durations'][] = $duration;
-
-                // Track by dentist
-                if ($apt->dentist) {
-                    if (!isset($appointmentsByDentist[$apt->dentist->name])) {
-                        $appointmentsByDentist[$apt->dentist->name] = [
-                            'dentist_id' => $apt->dentist_id,
-                            'name' => $apt->dentist->name,
-                            'count' => 0,
-                            'totalDuration' => 0,
-                            'durations' => []
-                        ];
-                    }
-                    $appointmentsByDentist[$apt->dentist->name]['count']++;
-                    $appointmentsByDentist[$apt->dentist->name]['totalDuration'] += $duration;
-                    $appointmentsByDentist[$apt->dentist->name]['durations'][] = $duration;
-                }
-
-                $durationStats['totalAppointments']++;
-                if ($durationStats['minDuration'] === null || $duration < $durationStats['minDuration']) {
-                    $durationStats['minDuration'] = $duration;
-                }
-                if ($durationStats['maxDuration'] === null || $duration > $durationStats['maxDuration']) {
-                    $durationStats['maxDuration'] = $duration;
-                }
-            }
-        }
-
-        // Calculate averages for services
-        foreach ($appointmentsByService as $service) {
-            $durationStats['byService'][] = [
-                'name' => $service['name'],
-                'count' => $service['count'],
-                'averageDuration' => round($service['totalDuration'] / $service['count'], 0),
-                'minDuration' => min($service['durations']),
-                'maxDuration' => max($service['durations']),
-                'variance' => round($this->calculateVariance($service['durations']), 2)
-            ];
-        }
-
-        // Calculate averages for dentists
-        foreach ($appointmentsByDentist as $dentist) {
-            $durationStats['byDentist'][] = [
-                'name' => $dentist['name'],
-                'count' => $dentist['count'],
-                'averageDuration' => round($dentist['totalDuration'] / $dentist['count'], 0),
-                'minDuration' => min($dentist['durations']),
-                'maxDuration' => max($dentist['durations']),
-                'variance' => round($this->calculateVariance($dentist['durations']), 2)
-            ];
-        }
-
-        if ($durationStats['totalAppointments'] > 0) {
-            $durationStats['averageDuration'] = round(
-                array_sum(array_column($appointmentsByService, 'totalDuration')) / $durationStats['totalAppointments'],
-                0
-            );
-        }
-
-        // Appointment Distribution & Schedule Gaps
-        $appointmentsByHour = Appointment::selectRaw('HOUR(appointment_time) as hour, COUNT(*) as count')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
-
-        $hourlyDistribution = [];
-        for ($i = 8; $i <= 17; $i++) {
-            $hour = str_pad($i, 2, '0', STR_PAD_LEFT);
-            $count = $appointmentsByHour->where('hour', $i)->first()?->count ?? 0;
-            $hourlyDistribution[] = [
-                'hour' => $hour . ':00',
-                'count' => $count,
-                'percentage' => $appointmentsByHour->sum('count') > 0 
-                    ? round(($count / $appointmentsByHour->sum('count')) * 100, 1)
-                    : 0
-            ];
-        }
-
-        // Daily distribution
-        $appointmentsByDay = Appointment::selectRaw('DAYNAME(appointment_date) as day, COUNT(*) as count')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->groupByRaw('DAYNAME(appointment_date), DAYOFWEEK(appointment_date)')
-            ->orderBy('DAYOFWEEK')
-            ->get();
-
-        // Dentist Utilization
-        $dentistUtilization = Appointment::selectRaw('dentists.id, dentists.name, COUNT(*) as appointments_count')
-            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
-            ->where('appointments.status', 'completed')
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->groupBy('dentists.id', 'dentists.name')
-            ->orderByRaw('COUNT(*) DESC')
-            ->get();
-
-        $totalCompletedAppointments = Appointment::where('appointments.status', 'completed')
-            ->whereBetween('appointment_date', [$dateFrom, $dateTo])
-            ->count();
-
-        foreach ($dentistUtilization as $dentist) {
-            $dentist->utilization_percentage = $totalCompletedAppointments > 0
-                ? round(($dentist->appointments_count / $totalCompletedAppointments) * 100, 1)
-                : 0;
-        }
-
-        // Optimization Recommendations
-        $recommendations = [];
-        
-        // Check for peak hours
-        $peakHour = collect($hourlyDistribution)->sortByDesc('count')->first();
-        if ($peakHour['count'] > 0) {
-            $recommendations[] = [
-                'type' => 'Peak Hours',
-                'message' => "Peak appointment time is {$peakHour['hour']} with {$peakHour['count']} appointments (" . $peakHour['percentage'] . "%). Consider scheduling more staff during this period.",
-                'priority' => 'high'
-            ];
-        }
-
-        // Check for low utilization hours
-        $lowHours = collect($hourlyDistribution)->filter(fn($h) => $h['count'] < 2)->count();
-        if ($lowHours > 2) {
-            $recommendations[] = [
-                'type' => 'Underutilized Time Slots',
-                'message' => "There are {$lowHours} hours with very few appointments. Consider promotional offers for off-peak times.",
-                'priority' => 'medium'
-            ];
-        }
-
-        // Check for long treatment times
-        if ($durationStats['averageDuration'] > 45) {
-            $recommendations[] = [
-                'type' => 'Treatment Duration',
-                'message' => "Average treatment time is {$durationStats['averageDuration']} minutes. Review if scheduling intervals are adequate.",
-                'priority' => 'medium'
-            ];
-        }
-
-        // Check for dentist utilization imbalance
-        if ($dentistUtilization->count() > 1) {
-            $max = $dentistUtilization->max('utilization_percentage');
-            $min = $dentistUtilization->min('utilization_percentage');
-            if ($max - $min > 20) {
-                $maxDentist = $dentistUtilization->where('utilization_percentage', $max)->first();
-                $minDentist = $dentistUtilization->where('utilization_percentage', $min)->first();
-                $recommendations[] = [
-                    'type' => 'Dentist Load Balancing',
-                    'message' => "{$maxDentist->name} has {$maxDentist->utilization_percentage}% of appointments while {$minDentist->name} has {$minDentist->utilization_percentage}%. Consider better distribution.",
-                    'priority' => 'medium'
-                ];
-            }
-        }
-
-        return view('staff.reports.scheduling-optimization', [
-            'durationStats' => $durationStats,
-            'hourlyDistribution' => $hourlyDistribution,
-            'dailyDistribution' => $appointmentsByDay,
-            'dentistUtilization' => $dentistUtilization,
-            'recommendations' => $recommendations,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'totalAppointments' => $totalCompletedAppointments
-        ]);
-    }
-
-    /**
-     * Calculate variance for array of numbers
-     */
-    private function calculateVariance(array $numbers): float
-    {
-        if (empty($numbers)) {
-            return 0;
-        }
-
-        $mean = array_sum($numbers) / count($numbers);
-        $squareDiffs = array_map(function ($value) use ($mean) {
-            return pow($value - $mean, 2);
-        }, $numbers);
-
-        return sqrt(array_sum($squareDiffs) / count($squareDiffs));
-    }
 }

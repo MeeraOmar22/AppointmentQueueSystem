@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inspect Queue Board Data</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+        .log { background: #252526; padding: 10px; margin: 10px 0; border-left: 3px solid #007acc; border-radius: 3px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+        h2 { color: #4fc3f7; margin-top: 20px; }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .info { color: #9cdcfe; }
+    </style>
+</head>
+<body>
+    <h1>Queue Board Data Inspector</h1>
+    <div id="logs"></div>
+
+    <script>
+        const logsDiv = document.getElementById('logs');
+        const logs = [];
+
+        function log(category, message, data = null) {
+            let text = `[${new Date().toLocaleTimeString()}] ${category}: ${message}`;
+            if (data) {
+                text += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            const logEl = document.createElement('div');
+            logEl.className = 'log ' + (category === 'ERROR' ? 'error' : category === 'SUCCESS' ? 'success' : 'info');
+            logEl.textContent = text;
+            logsDiv.appendChild(logEl);
+            logs.push(text);
+            console.log(text);
+        }
+
+        log('INFO', 'Starting inspection...');
+
+        // Fetch the API
+        fetch('/api/queue-board/data', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Accept': 'application/json'
+            },
+            cache: 'no-store'
+        })
+        .then(response => {
+            log('INFO', `API Response: ${response.status} ${response.statusText}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            log('SUCCESS', 'API data received');
+            log('INFO', 'In Service count', data.inService?.length || 0);
+            
+            if (data.inService && data.inService.length > 0) {
+                const current = data.inService[0];
+                log('SUCCESS', 'Current patient data:', {
+                    queue_number: current.queue_number,
+                    patient_name: current.appointment?.patient_name,
+                    room_id: current.room?.id,
+                    room_number: current.room?.room_number,
+                    dentist_name: current.dentist?.name,
+                    full_room_object: current.room
+                });
+                
+                if (!current.room || !current.room.room_number) {
+                    log('ERROR', 'Room number missing!', current);
+                }
+            }
+            
+            log('SUCCESS', 'Waiting count', data.waiting?.length || 0);
+        })
+        .catch(error => {
+            log('ERROR', 'Fetch failed', error.message);
+        });
+    </script>
+</body>
+</html>

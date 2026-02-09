@@ -22,4 +22,25 @@ class DentistLeave extends Model
     {
         return $this->belongsTo(Dentist::class);
     }
+
+    /**
+     * Boot the model.
+     * Add validation to ensure end_date >= start_date
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if ($model->end_date < $model->start_date) {
+                throw new \Exception('End date cannot be before start date');
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->end_date < $model->start_date) {
+                throw new \Exception('End date cannot be before start date');
+            }
+        });
+    }
 }

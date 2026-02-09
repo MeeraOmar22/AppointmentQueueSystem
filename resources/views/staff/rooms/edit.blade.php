@@ -84,6 +84,14 @@
                     @enderror
                 </div>
 
+                <input type="hidden" name="is_active" value="0">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
+                        {{ old('is_active', $room->is_active) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="is_active">Room is active for auto-assignment</label>
+                    <div class="form-text">Uncheck to pause the room without deleting it.</div>
+                </div>
+
                 <div class="d-grid gap-2 mt-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle me-2"></i>Save Changes

@@ -70,6 +70,30 @@
                 </div>
             </div>
         </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div>
+                                <p class="text-muted small mb-1">Active Rooms</p>
+                                <h4 class="text-success fw-bold mb-0">{{ $stats['active_rooms'] }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div>
+                                <p class="text-muted small mb-1">Inactive Rooms</p>
+                                <h4 class="text-muted fw-bold mb-0">{{ $stats['inactive_rooms'] }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         <div class="col-md-6 col-lg-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
@@ -94,6 +118,7 @@
                         <th>Room #</th>
                         <th>Capacity</th>
                         <th>Status</th>
+                        <th>Config</th>
                         <th>Current Patient</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -115,6 +140,17 @@
                                 @else
                                     <span class="badge bg-warning">
                                         <i class="fas fa-hourglass-end"></i> In Use
+                                    </span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($room->is_active)
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-circle-notch"></i> Active
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-slash"></i> Inactive
                                     </span>
                                 @endif
                             </td>

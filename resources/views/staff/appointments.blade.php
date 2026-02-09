@@ -20,52 +20,80 @@
 
 <div class="row g-3 mb-4" id="statsContainer">
     <div class="col-md-6 col-lg-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <p class="text-muted small mb-1">Total Appointments</p>
-                        <h4 class="text-primary fw-bold mb-0" data-stat="total">{{ $stats['total'] }}</h4>
+        <a href="{{ route('staff.appointments.total') }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 0.5rem 1rem rgba(0, 0, 0, 0.15)';"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-calendar-check text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted small mb-1">Total Appointments</p>
+                            <h4 class="text-primary fw-bold mb-0" data-stat="total">{{ $stats['total'] }}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <p class="text-muted small mb-1">Queued</p>
-                        <h4 class="text-info fw-bold mb-0" data-stat="queued">{{ $stats['queued'] }}</h4>
+        <a href="{{ route('staff.appointments.queued') }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 0.5rem 1rem rgba(0, 0, 0, 0.15)';"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-hourglass-split text-info" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted small mb-1">Queued</p>
+                            <h4 class="text-info fw-bold mb-0" data-stat="queued">{{ $stats['queued'] }}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <p class="text-muted small mb-1">In Treatment</p>
-                        <h4 class="text-warning fw-bold mb-0" data-stat="in_service">{{ $stats['in_service'] }}</h4>
+        <a href="{{ route('staff.appointments.in-treatment') }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 0.5rem 1rem rgba(0, 0, 0, 0.15)';"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-heart-pulse text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted small mb-1">In Treatment</p>
+                            <h4 class="text-warning fw-bold mb-0" data-stat="in_service">{{ $stats['in_service'] }}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div>
-                        <p class="text-muted small mb-1">Completed</p>
-                        <h4 class="text-success fw-bold mb-0" data-stat="completed">{{ $stats['completed'] }}</h4>
+        <a href="{{ route('staff.appointments.completed') }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 0.5rem 1rem rgba(0, 0, 0, 0.15)';"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='';">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted small mb-1">Completed</p>
+                            <h4 class="text-success fw-bold mb-0" data-stat="completed">{{ $stats['completed'] }}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -136,7 +164,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0">Today’s Queue</h5>
-                    <span class="text-muted small"><i class="bi bi-arrow-repeat me-1"></i>Live updates every 5 seconds</span>
+                    <span class="text-muted small"><i class="bi bi-arrow-repeat me-1"></i>Live updates every 3 seconds</span>
                 </div>
 
                 <div class="table-responsive" id="appointmentsTableContainer">
@@ -160,27 +188,27 @@
                             @forelse($appointments as $appointment)
                                 @php
                                     $queue = $appointment->queue;
-                                    $queueNumber = $queue?->queue_number ?? '—';
+                                    $queueNumber = $queue?->queue_number ? 'A-' . str_pad($queue->queue_number, 2, '0', STR_PAD_LEFT) : '—';
                                     $queueStatus = $queue?->queue_status ?? 'not-queued';
                                     $eta = $queue && isset($waitingTimeMap[$appointment->id]) ? $waitingTimeMap[$appointment->id] : '—';
 
-                                    $badgeClass = match($queueStatus) {
-                                        'waiting' => 'badge-soft badge-waiting',
-                                        'checked_in' => 'badge-soft badge-checkedin',
-                                        'in_treatment' => 'badge-soft badge-intreatment',
-                                        'completed' => 'badge-soft badge-completed',
-                                        default => 'badge bg-light text-muted'
+                                    $badgeStyles = match($queueStatus) {
+                                        'waiting' => 'background-color: #FFF3E0; color: #E65100;',
+                                        'called' => 'background-color: #FFEBEE; color: #C62828;',
+                                        'in_treatment' => 'background-color: #E0F2F1; color: #004D40;',
+                                        'completed' => 'background-color: #E8F5E9; color: #1B5E20;',
+                                        default => 'background-color: #f0f0f0; color: #666;'
                                     };
 
                                     $badgeText = match($queueStatus) {
                                         'waiting' => 'Waiting',
-                                        'checked_in' => 'Checked In',
+                                        'called' => 'Called',
                                         'in_treatment' => 'In Treatment',
                                         'completed' => 'Done',
                                         default => 'Not Queued'
                                     };
                                 @endphp
-                                <tr>
+                                <tr data-appointment-id="{{ $appointment->id }}">
                                     <td class="fw-semibold">
                                         {{ $appointment->patient_name }}
                                         @if($appointment->checked_in_at)
@@ -192,7 +220,7 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-primary text-white">
-                                            {{ $appointment->visit_code }}
+                                            {{ $appointment->visit_code ?: 'APT-' . $appointment->id }}
                                         </span>
                                     </td>
                                     <td>{{ $appointment->service->name ?? $appointment->service->service_name ?? '—' }}</td>
@@ -211,7 +239,7 @@
                                     </td>
                                     <td class="fw-bold">{{ $queueNumber }}</td>
                                     <td>
-                                        <span class="badge {{ $badgeClass }}">{{ $badgeText }}</span>
+                                        <span style="display: inline-block; padding: 0.35em 0.65em; border-radius: 0.25rem; font-weight: 500; {{ $badgeStyles }}">{{ $badgeText }}</span>
                                         @if($appointment->checked_in_at)
                                             <br>
                                             <small class="badge badge-success" title="Patient checked in at {{ $appointment->checked_in_at->format('H:i:s') }}">
@@ -222,9 +250,9 @@
                                     <td>{{ is_numeric($eta) ? $eta : '—' }}</td>
                                     <td class="text-center">
                                         @if(!$queue)
-                                            <form method="POST" action="/staff/checkin/{{ $appointment->id }}" class="d-inline">
+                                            <form method="POST" action="/staff/checkin/{{ $appointment->id }}" class="d-inline checkin-form">
                                                 @csrf
-                                                <button class="btn btn-sm btn-primary">Check In</button>
+                                                <button type="button" class="btn btn-sm btn-primary checkin-btn" data-appointment-id="{{ $appointment->id }}">Check In</button>
                                             </form>
                                         @else
                                             <div class="btn-group" role="group">
@@ -246,33 +274,21 @@
                                                     <input type="hidden" name="status" value="completed">
                                                     <button type="button" class="btn btn-sm btn-success done-btn" data-appointment-id="{{ $appointment->id }}" {{ $queueStatus === 'completed' ? 'disabled' : '' }}>Done</button>
                                                 </form>
+                                                <form method="POST" action="/staff/queue/{{ $queue->id }}" class="d-inline appointment-complete-form">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="hidden" name="status" value="completed">
+                                                    <button class="btn btn-sm btn-info" {{ $queueStatus === 'completed' ? 'disabled' : '' }}>Complete</button>
+                                                </form>
+                                                <form method="POST" action="/staff/appointments/{{ $appointment->id }}/cancel" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" {{ $queueStatus === 'completed' ? 'disabled' : '' }} onclick="return confirm('Cancel this appointment?')">Cancel</button>
+                                                </form>
                                             </div>
                                         @endif
                                     </td>
                                     <td class="text-center">
-                                        @php
-                                            $digits = preg_replace('/[^0-9]/', '', $appointment->patient_phone ?? '');
-                                            if (str_starts_with($digits, '0')) {
-                                                $waNumber = '60' . substr($digits, 1);
-                                            } elseif (str_starts_with($digits, '60')) {
-                                                $waNumber = $digits;
-                                            } else {
-                                                $waNumber = $digits;
-                                            }
-                                            $msg = "🦷 Klinik Pergigian Helmy - Appointment Reminder\n\n" .
-                                                "Hi {$appointment->patient_name},\n\n" .
-                                                "Your appointment is today at " . \Carbon\Carbon::parse($appointment->appointment_time)->format('H:i') . ".\n\n" .
-                                                "📋 Visit Code: {$appointment->visit_code}\n\n" .
-                                                "Please use these links when you arrive:\n" .
-                                                "✅ Check In: " . url('/checkin') . "\n" .
-                                                "📍 Track Visit: " . url('/track/' . $appointment->visit_code) . "\n\n" .
-                                                "See you soon! 😊";
-                                            $encodedMsg = rawurlencode($msg);
-                                            $waLink = 'https://api.whatsapp.com/send?phone=' . $waNumber . '&text=' . $encodedMsg;
-                                        @endphp
-                                        <a href="{{ $waLink }}" class="btn btn-sm btn-success" target="_blank" rel="noopener" title="Send reminder via WhatsApp">
-                                            <i class="bi bi-whatsapp"></i>
-                                        </a>
+                                        <small class="text-muted">Automated</small>
                                     </td>
                                     <td class="text-end">
                                         <a href="/staff/appointments/{{ $appointment->id }}/edit" class="btn btn-sm btn-outline-primary">
@@ -342,36 +358,7 @@
                                     <td>{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('H:i') }}</td>
                                     <td class="text-capitalize">{{ $appointment->status }}</td>
                                     <td class="text-center">
-                                        @php
-                                            $digits = preg_replace('/[^0-9]/', '', $appointment->patient_phone ?? '');
-                                            if (str_starts_with($digits, '0')) {
-                                                $waNumber = '60' . substr($digits, 1);
-                                            } elseif (str_starts_with($digits, '60')) {
-                                                $waNumber = $digits;
-                                            } else {
-                                                $waNumber = $digits;
-                                            }
-                                            $msg = "🦷 Klinik Pergigian Helmy - Appointment Confirmation\n\n" .
-                                                "Hi {$appointment->patient_name},\n\n" .
-                                                "This is a confirmation of your upcoming appointment:\n\n" .
-                                                "📅 Date: " . \Carbon\Carbon::parse($appointment->appointment_date)->format('l, d M Y') . "\n" .
-                                                "🕐 Time: " . \Carbon\Carbon::parse($appointment->appointment_time)->format('H:i') . "\n" .
-                                                "👨‍⚕️ Dentist: " . ($appointment->dentist->name ?? 'To be assigned') . "\n" .
-                                                "🦷 Service: " . ($appointment->service->name ?? 'N/A') . "\n\n" .
-                                                "📋 Visit Code: {$appointment->visit_code}\n\n" .
-                                                "When you arrive at the clinic:\n" .
-                                                "✅ Check In: " . url('/checkin') . "\n" .
-                                                "📍 Track Visit: " . url('/track/' . $appointment->visit_code) . "\n\n" .
-                                                "Please arrive 10-15 minutes early.\n\n" .
-                                                "We look forward to seeing you! 😊\n\n" .
-                                                "Klinik Pergigian Helmy\n" .
-                                                "📞 06-677 1940";
-                                            $encodedMsg = rawurlencode($msg);
-                                            $waLink = 'https://api.whatsapp.com/send?phone=' . $waNumber . '&text=' . $encodedMsg;
-                                        @endphp
-                                        <a href="{{ $waLink }}" class="btn btn-sm btn-success" target="_blank" rel="noopener" title="Send reminder via WhatsApp">
-                                            <i class="bi bi-whatsapp"></i>
-                                        </a>
+                                        <small class="text-muted">Automated</small>
                                     </td>
                                     <td class="text-end">
                                         <a href="/staff/appointments/{{ $appointment->id }}/edit" class="btn btn-sm btn-outline-primary">
@@ -441,35 +428,16 @@
                                     <td>{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('H:i') }}</td>
                                     <td class="text-capitalize">{{ $appointment->status }}</td>
                                     <td class="text-center">
-                                        @php
-                                            $digits = preg_replace('/[^0-9]/', '', $appointment->patient_phone ?? '');
-                                            if (str_starts_with($digits, '0')) {
-                                                $waNumber = '60' . substr($digits, 1);
-                                            } elseif (str_starts_with($digits, '60')) {
-                                                $waNumber = $digits;
-                                            } else {
-                                                $waNumber = $digits;
-                                            }
-                                            $msg = "🦷 Klinik Pergigian Helmy - We'd Love Your Feedback!\n\n" .
-                                                "Hi {$appointment->patient_name},\n\n" .
-                                                "Thank you for choosing us for your dental care on " . \Carbon\Carbon::parse($appointment->appointment_date)->format('d M Y') . ".\n\n" .
-                                                "We hope you had a great experience! 😊\n\n" .
-                                                "Your feedback helps us serve you better. Please take a moment to share your thoughts:\n\n" .
-                                                "📝 Feedback Form: " . url('/feedback?code=' . $appointment->visit_code) . "\n\n" .
-                                                "📋 Visit Code: {$appointment->visit_code}\n" .
-                                                "📍 View Visit Details: " . url('/track/' . $appointment->visit_code) . "\n\n" .
-                                                "We appreciate your time and look forward to seeing you again!\n\n" .
-                                                "Best regards,\n" .
-                                                "Klinik Pergigian Helmy Team\n" .
-                                                "📞 06-677 1940";
-                                            $encodedMsg = rawurlencode($msg);
-                                            $waLink = 'https://api.whatsapp.com/send?phone=' . $waNumber . '&text=' . $encodedMsg;
-                                        @endphp
-                                        <a href="{{ $waLink }}" class="btn btn-sm btn-success" target="_blank" rel="noopener" title="Send follow-up via WhatsApp">
-                                            <i class="bi bi-whatsapp"></i>
-                                        </a>
+                                        <small class="text-muted">Automated</small>
                                     </td>
                                     <td class="text-end">
+                                        @if($appointment->status !== 'completed' && $appointment->status !== 'cancelled')
+                                        <button class="btn btn-sm btn-success complete-treatment-btn me-2" 
+                                                data-appointment-id="{{ $appointment->id }}" 
+                                                title="Mark this appointment as complete">
+                                            <i class="bi bi-check-lg"></i> Complete
+                                        </button>
+                                        @endif
                                         <a href="/staff/appointments/{{ $appointment->id }}/edit" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-pencil"></i> Edit
                                         </a>
@@ -507,6 +475,42 @@
             const pill = new bootstrap.Tab(tabButton);
             pill.show();
         }
+
+        // Handle Check In button clicks
+        document.querySelectorAll('.checkin-btn').forEach(button => {
+            button.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const appointmentId = this.getAttribute('data-appointment-id');
+                const form = this.closest('.checkin-form');
+                
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        console.log('Check-in successful:', result);
+                        // Reload the page to see updated status
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Check-in error:', error);
+                    alert('Error checking in appointment');
+                }
+            });
+        });
         
         // Handle Done button click
         document.querySelectorAll('.done-btn').forEach(btn => {
@@ -580,12 +584,237 @@
         }
     });
 
-    // Real-time updates - auto refresh every 5 seconds
+    // Real-time updates - auto refresh every 3 seconds using AJAX
+    let appointmentsRefreshInterval;
+
     function startAutoRefresh() {
-        setInterval(function() {
-            location.reload();
-        }, 5000);
+        appointmentsRefreshInterval = setInterval(function() {
+            fetch('/api/staff/appointments/today')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch');
+                    return response.json();
+                })
+                .then(data => updateStatusBadges(data))
+                .catch(error => console.error('Error fetching appointments:', error));
+        }, 3000);
     }
+
+    function updateStatusBadges(data) {
+        if (!data.appointments) return;
+
+        data.appointments.forEach(apt => {
+            const badgeStyleMap = {
+                'waiting': 'background-color: #FFF3E0; color: #E65100;',
+                'called': 'background-color: #FFEBEE; color: #C62828;',
+                'in_treatment': 'background-color: #E0F2F1; color: #004D40;',
+                'completed': 'background-color: #E8F5E9; color: #1B5E20;',
+                'not-queued': 'background-color: #f0f0f0; color: #666;'
+            };
+
+            const badgeTextMap = {
+                'waiting': 'Waiting',
+                'called': 'Called',
+                'in_treatment': 'In Treatment',
+                'completed': 'Done',
+                'not-queued': 'Not Queued'
+            };
+
+            // Find row by appointment ID
+            const row = document.querySelector(`tr[data-appointment-id="${apt.id}"]`);
+            if (!row) return;
+
+            // Update status badge (7th column)
+            const statusCells = row.querySelectorAll('td:nth-child(7)');
+            statusCells.forEach(cell => {
+                const badgeStyle = badgeStyleMap[apt.queue_status] || 'background-color: #f0f0f0; color: #666;';
+                const badgeText = badgeTextMap[apt.queue_status] || 'Not Queued';
+                
+                cell.innerHTML = `<span style="display: inline-block; padding: 0.35em 0.65em; border-radius: 0.25rem; font-weight: 500; ${badgeStyle}">${badgeText}</span>`;
+                if (apt.checked_in_at) {
+                    cell.innerHTML += `<br><small class="badge badge-success" title="Checked in at ${apt.checked_in_at}"><i class="bi bi-check-circle-fill"></i> ${apt.checked_in_at}</small>`;
+                }
+            });
+
+            // Update queue number (6th column)
+            const queueCells = row.querySelectorAll('td:nth-child(6)');
+            queueCells.forEach(cell => {
+                cell.textContent = apt.queue_number;
+            });
+
+            // Update Actions buttons (9th column) - if queue was just created
+            const actionsCells = row.querySelectorAll('td:nth-child(9)');
+            actionsCells.forEach(cell => {
+                // Check if this row currently shows "Check In" button (no queue)
+                const hasCheckInButton = cell.innerHTML.includes('Check In');
+                
+                // If we have a queue now but the buttons haven't been updated yet, update them
+                if (apt.queue_id && hasCheckInButton) {
+                    updateActionButtons(cell, apt);
+                }
+            });
+        });
+    }
+
+    function updateActionButtons(cell, apt) {
+        const queueStatus = apt.queue_status;
+        
+        // Build the queue buttons HTML
+        let buttonsHTML = `
+            <div class="btn-group" role="group">
+                <form method="POST" action="/staff/queue/${apt.queue_id}" class="d-inline">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || ''}">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="status" value="waiting">
+                    <button class="btn btn-sm btn-ghost" ${queueStatus === 'waiting' || queueStatus === 'completed' ? 'disabled' : ''}>Waiting</button>
+                </form>
+                <form method="POST" action="/staff/queue/${apt.queue_id}" class="d-inline">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || ''}">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="status" value="in_treatment">
+                    <button class="btn btn-sm btn-ghost" ${queueStatus === 'in_treatment' || queueStatus === 'completed' ? 'disabled' : ''}>Start</button>
+                </form>
+                <form method="POST" action="/staff/queue/${apt.queue_id}" class="d-inline appointment-done-form">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || ''}">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="status" value="completed">
+                    <button type="button" class="btn btn-sm btn-success done-btn" data-appointment-id="${apt.id}" ${queueStatus === 'completed' ? 'disabled' : ''}>Done</button>
+                </form>
+                <form method="POST" action="/staff/queue/${apt.queue_id}" class="d-inline appointment-complete-form">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || ''}">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="status" value="completed">
+                    <button class="btn btn-sm btn-info" ${queueStatus === 'completed' ? 'disabled' : ''}>Complete</button>
+                </form>
+                <form method="POST" action="/staff/appointments/${apt.id}/cancel" class="d-inline">
+                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.content || ''}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" ${queueStatus === 'completed' ? 'disabled' : ''} onclick="return confirm('Cancel this appointment?')">Cancel</button>
+                </form>
+            </div>
+        `;
+        
+        cell.innerHTML = buttonsHTML;
+    }
+
+    /**
+     * Real-time polling to refresh appointment data every 3 seconds
+     * This ensures the staff dashboard updates when patients check in via tracking link
+     */
+    let pollInterval = null;
+    
+    function startAppointmentPolling() {
+        // Poll every 3 seconds
+        pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/staff/appointments', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    console.error('Failed to fetch appointments:', response.statusText);
+                    return;
+                }
+                
+                const data = await response.json();
+                if (data.success && data.data && data.data.appointments) {
+                    // Update each appointment row with fresh data
+                    data.data.appointments.forEach(apt => {
+                        const row = document.querySelector(`tr[data-appointment-id="${apt.id}"]`);
+                        if (row) {
+                            updateAppointmentRow(row, apt);
+                        }
+                    });
+                    
+                    // Update stats
+                    updateStatistics(data.data.appointments);
+                }
+            } catch (error) {
+                console.error('Error polling appointments:', error);
+                // Don't stop polling on error, just continue trying
+            }
+        }, 3000);
+    }
+
+    function updateStatistics(appointments) {
+        const total = appointments.length;
+        const queued = appointments.filter(a => ['checked_in', 'waiting'].includes(a.status)).length;
+        const inService = appointments.filter(a => a.status === 'in_treatment').length;
+        const completed = appointments.filter(a => a.status === 'completed').length;
+        
+        document.querySelector('[data-stat="total"]').textContent = total;
+        document.querySelector('[data-stat="queued"]').textContent = queued;
+        document.querySelector('[data-stat="in_service"]').textContent = inService;
+        document.querySelector('[data-stat="completed"]').textContent = completed;
+    }
+
+    // Start polling when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        startAppointmentPolling();
+    });
+
+    // Stop polling when page is unloaded
+    window.addEventListener('beforeunload', function() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
+    });
+
+    // Handle complete treatment button for past appointments
+    document.querySelectorAll('.complete-treatment-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const appointmentId = this.getAttribute('data-appointment-id');
+            const row = document.querySelector(`tr[data-appointment-id="${appointmentId}"]`);
+            
+            if (!confirm('Mark this appointment as complete?')) return;
+            
+            try {
+                const response = await fetch(`/api/staff/appointments/${appointmentId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert('Error: ' + (error.message || 'Failed to complete appointment'));
+                    return;
+                }
+
+                // Success - update the UI without full reload
+                if (row) {
+                    // Find the status cell (7th column in past tab)
+                    const statusCell = row.querySelector('td:nth-child(7)');
+                    if (statusCell) {
+                        statusCell.textContent = 'completed';
+                        statusCell.classList.add('text-capitalize');
+                    }
+                    
+                    // Hide the complete button
+                    this.style.display = 'none';
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show';
+                    successMsg.innerHTML = `
+                        <i class="bi bi-check-circle"></i> Appointment marked as complete!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    row.parentElement.insertBefore(successMsg, row);
+                }
+            } catch (error) {
+                console.error('Error completing appointment:', error);
+                alert('Error: ' + error.message);
+            }
+        });
+    });
+
 </script>
 
 <style>

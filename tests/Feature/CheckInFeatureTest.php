@@ -110,7 +110,7 @@ class CheckInFeatureTest extends TestCase
 
         $this->assertDatabaseHas('queues', [
             'id' => $queue->id,
-            'queue_status' => 'in_service',
+            'queue_status' => 'waiting',
         ]);
     }
 

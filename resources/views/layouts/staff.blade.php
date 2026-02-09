@@ -562,67 +562,78 @@
 
 <div class="sidebar" id="sidebar">
     <nav class="nav flex-column">
-        <a class="nav-link {{ request()->is('staff/quick-edit') ? 'active' : '' }}" href="/staff/quick-edit">
-            <i class="bi bi-lightning-fill"></i> Quick Edit
-        </a>
-        <hr class="my-2" style="opacity: 0.1;">
-        <a class="nav-link {{ request()->is('staff/appointments') ? 'active' : '' }}" href="/staff/appointments">
-            <i class="bi bi-calendar-check"></i> Appointments & Queue
-        </a>
-        <a class="nav-link {{ request()->is('staff/treatment-completion') ? 'active' : '' }}" href="/staff/treatment-completion">
-            <i class="bi bi-clipboard-check"></i> Treatment Completion
-        </a>
-        <a class="nav-link {{ request()->is('staff/operating-hours*') ? 'active' : '' }}" href="/staff/operating-hours">
-            <i class="bi bi-clock"></i> Operating Hours
-        </a>
-        <a class="nav-link {{ request()->is('staff/dentist-schedules*') ? 'active' : '' }}" href="/staff/dentist-schedules">
-            <i class="bi bi-calendar-week"></i> Dentist Schedules
-        </a>
-        <a class="nav-link {{ request()->is('staff/dentists*') ? 'active' : '' }}" href="/staff/dentists">
-            <i class="bi bi-person-badge"></i> Dentists
-        </a>
-        <a class="nav-link {{ request()->is('staff/rooms*') ? 'active' : '' }}" href="/staff/rooms">
-            <i class="bi bi-door-open"></i> Treatment Rooms
-        </a>
-        <a class="nav-link {{ request()->is('staff/services*') ? 'active' : '' }}" href="/staff/services">
-            <i class="bi bi-grid-3x3-gap-fill"></i> Services
-        </a>
-        <a class="nav-link {{ request()->is('staff/feedback*') ? 'active' : '' }}" href="/staff/feedback">
-            <i class="bi bi-chat-heart"></i> Patient Feedback
-        </a>
+        <!-- STAFF ROLE: OPERATIONS (Daily Clinic Operations) -->
+        @if(auth()->check() && auth()->user()->role === 'staff')
+            <div class="nav-section-title px-3 py-2 text-muted small fw-bold">OPERATIONS</div>
+            
+            <a class="nav-link {{ request()->is('staff/queue*') ? 'active' : '' }}" href="/staff/queue" title="Live queue board - primary daily interface">
+                <i class="bi bi-lightning-fill" style="color: #ff6b6b;"></i> Live Queue Board
+            </a>
+            
+            <a class="nav-link {{ request()->is('staff/appointments') ? 'active' : '' }}" href="/staff/appointments">
+                <i class="bi bi-calendar-check"></i> Appointments
+            </a>
+            
+            <hr class="my-2" style="opacity: 0.1;">
+            
+            <!-- STAFF ROLE: MANAGEMENT -->
+            <div class="nav-section-title px-3 py-2 text-muted small fw-bold">MANAGEMENT</div>
+            
+            <a class="nav-link {{ request()->is('staff/dentist-management*') ? 'active' : '' }}" href="/staff/dentist-management">
+                <i class="bi bi-person-badge"></i> Dentist Overview
+            </a>
+            
+            <a class="nav-link {{ request()->is('staff/rooms*') ? 'active' : '' }}" href="/staff/rooms" title="Configure treatment rooms and occupancy">
+                <i class="bi bi-door-closed"></i> Treatment Rooms
+            </a>
+            
+            <a class="nav-link {{ request()->is('staff/feedback*') ? 'active' : '' }}" href="/staff/feedback">
+                <i class="bi bi-chat-heart"></i> Feedback
+            </a>
+            
+            <hr class="my-2" style="opacity: 0.1;">
+        @endif
+        
+        <!-- SHARED: REPORTS (All Roles) -->
+        <div class="nav-section-title px-3 py-2 text-muted small fw-bold">REPORTS</div>
+        
         <div class="nav-item dropdown">
             <a class="nav-link {{ request()->is('staff/reports*') ? 'active' : '' }} dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-bar-chart"></i> Reports & Analytics
+                <i class="bi bi-bar-chart"></i> Reports
             </a>
             <ul class="dropdown-menu" aria-labelledby="reportsDropdown" style="font-size: 0.95rem;">
                 <li><a class="dropdown-item" href="/staff/reports/dashboard">
-                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                </a></li>
-                <li><a class="dropdown-item" href="/staff/reports/appointments">
-                    <i class="bi bi-calendar-check me-2"></i>Appointment Analysis
+                    <i class="bi bi-speedometer2 me-2"></i>Summary
                 </a></li>
                 <li><a class="dropdown-item" href="/staff/reports/revenue">
-                    <i class="bi bi-cash-coin me-2"></i>Revenue Reports
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/staff/reports/patient-retention">
-                    <i class="bi bi-shield-exclamation me-2"></i>Patient Retention
-                </a></li>
-                <li><a class="dropdown-item" href="/staff/reports/scheduling-optimization">
-                    <i class="bi bi-calendar-week me-2"></i>Scheduling Optimization
+                    <i class="bi bi-cash-coin me-2"></i>Revenue
                 </a></li>
             </ul>
         </div>
-        @if(Auth::user()->role === 'developer')
+        
+        <!-- ADMIN/DEVELOPER ROLE: SYSTEM CONFIGURATION -->
+        @if(auth()->check() && in_array(auth()->user()->role, ['admin','developer']))
             <hr class="my-2" style="opacity: 0.1;">
-            <a class="nav-link" href="/developer/dashboard" target="_blank">
-                <i class="bi bi-code-slash"></i> Developer Tools <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.8rem;"></i>
+            <div class="nav-section-title px-3 py-2 text-muted small fw-bold">SYSTEM CONFIGURATION</div>
+            
+            <a class="nav-link {{ request()->is('staff/system-config*') ? 'active' : '' }}" href="/staff/system-config" title="System configuration center">
+                <i class="bi bi-gear-fill"></i> System Config
             </a>
         @endif
+        
+        <!-- SHARED: PAST RECORDS (All Roles) -->
         <hr class="my-2" style="opacity: 0.1;">
         <a class="nav-link {{ request()->is('staff/past*') ? 'active' : '' }}" href="/staff/past">
-            <i class="bi bi-trash"></i> Past Records
+            <i class="bi bi-archive"></i> Past Records
         </a>
+        
+        <!-- DEVELOPER ROLE: DEV TOOLS -->
+        @if(auth()->check() && auth()->user()->role === 'developer')
+            <hr class="my-2" style="opacity: 0.1;">
+            <a class="nav-link" href="/developer/dashboard" target="_blank" title="Developer tools and diagnostics">
+                <i class="bi bi-code-slash"></i> Dev Tools <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.8rem;"></i>
+            </a>
+        @endif
     </nav>
 </div>
 

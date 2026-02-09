@@ -57,6 +57,14 @@
                     @enderror
                 </div>
 
+                <input type="hidden" name="is_active" value="0">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
+                        {{ old('is_active', 1) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="is_active">Enable room for scheduling (Active)</label>
+                    <div class="form-text">Inactive rooms are hidden from auto-assignment without deleting the configuration.</div>
+                </div>
+
                 <div class="alert alert-info mb-4" role="alert">
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>Clinic:</strong> {{ $clinicName }}

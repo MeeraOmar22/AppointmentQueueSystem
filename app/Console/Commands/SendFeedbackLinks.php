@@ -21,7 +21,7 @@ class SendFeedbackLinks extends Command
      *
      * @var string
      */
-    protected $description = 'Send feedback links to patients who completed treatment 1 hour ago';
+    protected $description = 'Retry sending feedback links to patients (sent instantly after treatment, but this retries for any that failed)';
 
     /**
      * Create a new command instance.
@@ -40,30 +40,29 @@ class SendFeedbackLinks extends Command
      */
     public function handle()
     {
-        // Get appointments completed exactly 1 hour ago (within 5 minute window)
-        $oneHourAgo = Carbon::now()->subHour();
-        $fiveMinutesAgo = Carbon::now()->subMinutes(5);
-
-        $completedAppointments = Appointment::where('status', 'completed')
-            ->whereBetween('updated_at', [$oneHourAgo, $fiveMinutesAgo])
+        // This command now retries feedback links for any that are still in FEEDBACK_SCHEDULED state
+        // Most feedback links are sent instantly when treatment completes
+        // This catches any that failed and retries them
+        
+        $scheduledAppointments = Appointment::where('status', 'feedback_scheduled')
             ->whereDoesntHave('feedback') // Only if no feedback submitted yet
             ->get();
 
         $whatsAppSender = new WhatsAppSender();
         $sent = 0;
 
-        foreach ($completedAppointments as $appointment) {
+        foreach ($scheduledAppointments as $appointment) {
             try {
                 $whatsAppSender->sendFeedbackLink($appointment);
                 $sent++;
                 
-                $this->info("Feedback link sent to {$appointment->patient_name} ({$appointment->patient_phone})");
+                $this->info("Feedback link (retry) sent to {$appointment->patient_name} ({$appointment->patient_phone})");
             } catch (\Exception $e) {
                 $this->error("Failed to send feedback link to {$appointment->patient_name}: " . $e->getMessage());
             }
         }
 
-        $this->info("Feedback links sent successfully to {$sent} patients");
+        $this->info("Feedback links sent successfully to {$sent} patients (retries)");
 
         return 0;
     }

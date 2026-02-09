@@ -5,158 +5,28 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Service;
 use App\Models\Dentist;
-use App\Models\DentistSchedule;
 use App\Models\Appointment;
-use App\Models\OperatingHour;
 use App\Models\Queue;
+use App\Models\Room;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
-use App\Services\WhatsAppSender;
-use App\Mail\AppointmentConfirmation;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Services\ActivityLogger;
+use App\Services\QueueAssignmentService;
+use App\Services\AppointmentStateService;
+use App\Services\WhatsAppSender;
+use App\Services\EstimatedWaitTimeService;
 
 class AppointmentController extends Controller
 {
-    public function create()
+    // ⚠️ REMOVED: create() and store() methods - Use CalendarBookingController instead
+    // This controller now focuses on tracking and queue operations
+    // Public booking is now handled by CalendarBookingController (modern system)
+    // See routes/web.php: GET /book → CalendarBookingController::showForm()
+
+    public function trackSearch()
     {
-        $services = Service::all();
-        $dentists = Dentist::where('status', 1)->get();
-        $operatingHours = OperatingHour::all();
-
-        return view('public.book', compact('services', 'dentists', 'operatingHours'));
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'patient_name' => 'required|string',
-            'patient_phone' => 'required|string',
-            'patient_email' => 'nullable|email',
-            'clinic_location' => 'required|in:seremban,kuala_pilah',
-            'service_id' => 'required|exists:services,id',
-            'dentist_preference' => 'required|in:any,specific',
-            'dentist_id' => 'nullable|exists:dentists,id',
-            'appointment_date' => 'required|date|after_or_equal:today',
-            'appointment_time' => 'required|date_format:H:i',
-        ]);
-
-        // Validate that dentist_id is provided when preference is 'specific'
-        if ($data['dentist_preference'] === 'specific' && empty($data['dentist_id'])) {
-            return back()
-                ->withInput()
-                ->withErrors(['dentist_id' => 'Please select a dentist for your preferred appointment.']);
-        }
-
-        $service = Service::findOrFail($data['service_id']);
-        $serviceDuration = max((int) ($service->estimated_duration ?? 0), 15);
-
-        $startAt = Carbon::parse($data['appointment_date'] . ' ' . $data['appointment_time']);
-        $endAt = (clone $startAt)->addMinutes($serviceDuration);
-
-        // If preference is 'specific', verify dentist availability
-        $dentistId = null;
-        if ($data['dentist_preference'] === 'specific') {
-            $dentist = Dentist::findOrFail($data['dentist_id']);
-            
-            if (!$this->dentistIsAvailable($dentist->id, $startAt, $endAt)) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['dentist_id' => 'Selected dentist is not available for that time.']);
-            }
-            
-            $dentistId = $dentist->id;
-        }
-        // If preference is 'any', dentist_id will be NULL and assigned during queue execution
-
-        $appointment = Appointment::create([
-            'patient_name' => $data['patient_name'],
-            'patient_phone' => $data['patient_phone'],
-            'patient_email' => $data['patient_email'] ?? null,
-            'clinic_location' => $data['clinic_location'],
-            'service_id' => $service->id,
-            'dentist_id' => $dentistId,
-            'appointment_date' => $startAt->toDateString(),
-            'appointment_time' => $startAt->format('H:i:s'),
-            'start_at' => $startAt,
-            'end_at' => $endAt,
-            'status' => 'booked',
-            'booking_source' => 'public',
-        ]);
-
-        $queueNumber = null;
-        $etaMinutes = null;
-
-        if ($startAt->isToday()) {
-            $queueNumber = Queue::nextNumberForDate($startAt);
-            $etaMinutes = ($queueNumber - 1) * $serviceDuration;
-
-            Queue::updateOrCreate(
-                ['appointment_id' => $appointment->id],
-                [
-                    'queue_number' => $queueNumber,
-                    'queue_status' => 'waiting',
-                ]
-            );
-        }
-
-        // Send Email confirmation (only if email provided)
-        if (!empty($appointment->patient_email)) {
-            try {
-                Mail::to($appointment->patient_email)->send(new AppointmentConfirmation($appointment, $data['patient_name']));
-            } catch (\Throwable $e) {
-                // Log error but don't block booking
-                \Log::warning('Failed to send appointment confirmation email: ' . $e->getMessage());
-            }
-        }
-
-        // Send WhatsApp confirmation (non-blocking best-effort)
-        try {
-            app(WhatsAppSender::class)->sendAppointmentConfirmation($appointment);
-        } catch (\Throwable $e) {
-            // ignore
-        }
-
-        // Log the public booking
-        ActivityLogger::log(
-            'booked',
-            'Appointment',
-            $appointment->id,
-            'Public booking by ' . $data['patient_name'] . ' for ' . $service->name,
-            null,
-            $appointment->toArray()
-        );
-
-        // For testing/API consistency, redirect to visit status page
-        return redirect()->to('/visit/' . $appointment->visit_token)
-            ->with('success', 'Appointment booked successfully!')
-            ->with('queue_number', $queueNumber)
-            ->with('eta_minutes', $etaMinutes);
-    }
-
-    public function visitStatus(string $token)
-    {
-        $appointment = Appointment::with(['service', 'queue', 'dentist'])
-            ->where('visit_token', $token)
-            ->firstOrFail();
-
-        $queueNumber = $appointment->queue?->queue_number;
-        $queueStatus = $appointment->queue?->queue_status ?? 'not-queued';
-
-        $serviceDuration = max((int) ($appointment->service->estimated_duration ?? 0), 15);
-        $etaMinutes = null;
-
-        if ($queueNumber && $queueStatus !== 'completed') {
-            $etaMinutes = ($queueNumber - 1) * $serviceDuration;
-        }
-
-        return view('public.visit-status', [
-            'appointment' => $appointment,
-            'queueNumber' => $queueNumber,
-            'queueStatus' => $queueStatus,
-            'etaMinutes' => $etaMinutes,
-            'operatingHours' => OperatingHour::all(),
-        ]);
+        return view('public.track-search');
     }
 
     public function trackByCode(string $code)
@@ -165,314 +35,474 @@ class AppointmentController extends Controller
             ->where('visit_code', $code)
             ->firstOrFail();
 
-        [$queueNumber, $queueStatus, $etaMinutes, $currentServing] = $this->computeQueueInfo($appointment);
-        $room = $appointment->room ?? '—';
+        [$queueNumber, $etaMinutes, $currentServing] = $this->computeQueueInfo($appointment);
 
         return view('public.track', [
             'appointment' => $appointment,
+            'status' => $appointment->status,
             'queueNumber' => $queueNumber,
-            'queueStatus' => $queueStatus,
             'etaMinutes' => $etaMinutes,
             'currentServing' => $currentServing,
-            'room' => $room,
         ]);
     }
 
-    public function checkinForm()
+    public function queueBoard()
     {
-        return view('public.checkin', [
-            'operatingHours' => OperatingHour::all(),
-        ]);
+        $data = $this->buildQueueBoardData();
+
+        return view('public.queue-board', $data);
     }
 
-    public function checkinSubmit(Request $request)
+    public function getQueueBoardData()
     {
-        $data = $request->validate([
-            'visit_code' => 'nullable|string',
-            'token' => 'nullable|string',
-            'phone' => 'nullable|string',
-        ]);
+        $data = $this->buildQueueBoardData();
+        
+        // Get queue pause status
+        $queueSettings = DB::table('queue_settings')->first();
+        $isPaused = $queueSettings?->is_paused ?? false;
+        
+        // Convert Collections to arrays for JSON response
+        // This ensures proper serialization and prevents model relationship issues
+        return response()->json([
+            'inService' => $data['inService']->map(function ($queue) {
+                return [
+                    'id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'queue_status' => $queue->queue_status,
+                    'appointment_id' => $queue->appointment?->id,  // CRITICAL: For callPatient API
+                    'appointment' => [
+                        'id' => $queue->appointment?->id,
+                        'patient_name' => $queue->appointment?->patient_name,
+                        'visit_code' => $queue->appointment?->visit_code,
+                        'service' => $queue->appointment?->service?->name,
+                    ],
+                    'room' => [
+                        'id' => $queue->room?->id,
+                        'room_number' => $queue->room?->room_number,
+                    ],
+                    'dentist' => [
+                        'id' => $queue->dentist?->id,
+                        'name' => $queue->dentist?->name,
+                    ],
+                ];
+            })->values()->all(),  // values() to reindex array
+            'waiting' => $data['waiting']->map(function ($queue) {
+                return [
+                    'id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'queue_status' => $queue->queue_status,
+                    'appointment_id' => $queue->appointment?->id,  // CRITICAL: For callPatient API
+                    'appointment' => [
+                        'id' => $queue->appointment?->id,
+                        'patient_name' => $queue->appointment?->patient_name,
+                        'visit_code' => $queue->appointment?->visit_code,
+                        'service' => $queue->appointment?->service?->name,
+                    ],
+                    'dentist' => [
+                        'id' => $queue->dentist?->id,
+                        'name' => $queue->dentist?->name,
+                    ],
+                ];
+            })->values()->all(),  // values() to reindex array
+            'dentists' => $data['dentists'],
+            'rooms' => $data['rooms'],
+            'currentNumber' => $data['currentNumber'],
+            'stats' => $data['stats'],
+            'exceptions' => $data['exceptions'],
+            'timestamp' => $data['timestamp'],
+            'isPaused' => $isPaused,
+        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
+         ->header('Pragma', 'no-cache')
+         ->header('Expires', '0');
+    }
 
-        // Support both visit_code and token+phone check-in methods
-        if (!empty($data['visit_code'])) {
-            // Original flow: check-in by visit code only
-            $code = strtoupper(trim($data['visit_code']));
-            $appointment = Appointment::with(['service', 'queue', 'dentist'])
-                ->where('visit_code', $code)
-                ->first();
+    private function buildQueueBoardData(): array
+    {
+        $today = Carbon::today();
+        $clinicLocation = config('clinic.location', 'seremban');
 
-            if (!$appointment) {
-                return back()->withErrors(['visit_code' => 'Visit code not found. Please check and try again.'])->withInput();
-            }
-        } elseif (!empty($data['token']) && !empty($data['phone'])) {
-            // New flow: check-in by token + phone verification
-            $appointment = Appointment::with(['service', 'queue', 'dentist'])
-                ->where('visit_token', $data['token'])
-                ->first();
+        // CRITICAL FIX: Ensure fresh data is loaded from database, not from model cache
+        // When patient moves from waiting → in_treatment, we must query fresh state
+        // The Queue and Appointment must BOTH be synchronized to the same status
+        
+        // Patients in treatment - Load complete relationships for dentist and room display
+        // FIXED: Added explicit synchronization check to ensure queue_status and appointment.status match
+        // FIX: Removed select() restrictions that were preventing relationship hydration
+        // Foreign keys (dentist_id, room_id) must be loaded for Eloquent to resolve relationships
+        // FIX #7: Filter by clinic_location to prevent cross-clinic data leaks
+        // CRITICAL: Use fresh query (no cached models) to avoid stale data when status changes
+        // FIX #8: Order by DESC to show the LATEST (highest queue number) patient in treatment first
+        $inService = Queue::with(['appointment', 'room', 'dentist'])
+            ->where('queue_status', 'in_treatment')  // Check queue status first (fastest)
+            ->whereHas('appointment', function ($q) use ($today, $clinicLocation) {
+                $q->whereDate('appointment_date', $today)
+                  ->where('clinic_location', $clinicLocation)
+                  ->where('status', 'in_treatment');  // Verify appointment is also in_treatment
+            })
+            ->orderBy('queue_number', 'desc')  // DESC: Show latest queue first (highest number = most recent)
+            ->get();
 
-            if (!$appointment) {
-                return back()->withErrors(['token' => 'Invalid visit token.'])->withInput();
-            }
+        // Waiting patients - Load complete appointment and dentist relationships
+        // FIXED: Query waiting status from queue first, then verify appointment status
+        // FIX: Removed select() restrictions to ensure dentist relationship loads correctly
+        // FIX #7: Filter by clinic_location to prevent cross-clinic data leaks
+        // CRITICAL: Only show patients with status='waiting', not 'checked_in'
+        // checked_in is a transient state before joining the queue - must transition to waiting first
+        $waiting = Queue::with(['appointment.service', 'dentist'])
+            ->where('queue_status', 'waiting')  // Primary filter: queue status
+            ->whereHas('appointment', function ($q) use ($today, $clinicLocation) {
+                $q->whereDate('appointment_date', $today)
+                  ->where('clinic_location', $clinicLocation)
+                  ->where('status', 'waiting');  // ONLY waiting status, not checked_in
+            })
+            ->orderBy('queue_number')
+            ->get();
 
-            // Verify phone number matches
-            if ($appointment->patient_phone !== $data['phone']) {
-                return back()->withErrors(['phone' => 'Phone number does not match our records.'])->withInput();
-            }
-        } elseif (!empty($data['token']) && empty($data['phone'])) {
-            return back()->withErrors(['phone' => 'Phone number is required when using token.'])->withInput();
-        } elseif (empty($data['token']) && !empty($data['phone'])) {
-            return back()->withErrors(['token' => 'Visit token is required when providing phone.'])->withInput();
-        } else {
-            return back()->withErrors(['visit_code' => 'Please provide either a visit code or both token and phone number.'])->withInput();
+        // CRITICAL SYNC FIX: Handle any out-of-sync records
+
+
+        // CRITICAL DEDUPLICATION: Ensure no queue appears in both lists
+        // If a queue somehow ended up in both inService and waiting, remove from waiting
+        $inServiceIds = $inService->pluck('id')->toArray();
+        $waiting = $waiting->filter(function ($queue) use ($inServiceIds) {
+            return !in_array($queue->id, $inServiceIds);
+        })->values();  // Re-index after filtering
+
+        // Completed today - Count appointments where treatment has been COMPLETED
+        // NOTE: 'completed' status is transient - appointments transition through
+        // completed → feedback_scheduled → feedback_sent
+        // Use treatment_ended_at to identify completed appointments instead
+        $completed = Appointment::whereDate('appointment_date', $today)
+            ->where('clinic_location', $clinicLocation)
+            ->whereNotNull('treatment_ended_at')
+            ->count();
+
+        // Get all dentists with their status
+        // CRITICAL: Dentist availability is derived from active appointments, not from dentists.status
+        $busyDentistIds = $inService->pluck('dentist_id')->unique();
+        
+        $dentists = collect(Dentist::where('status', 1)
+            ->select('id', 'name', 'status')
+            ->get()
+            ->map(function ($dentist) use ($busyDentistIds) {
+                // CRITICAL: A dentist is "busy" ONLY if they have an active in_treatment appointment
+                $isInTreatment = $busyDentistIds->contains($dentist->id);
+                return [
+                    'id' => $dentist->id,
+                    'name' => $dentist->name,
+                    'status' => $isInTreatment ? 'busy' : 'available',
+                ];
+            })->toArray());
+        
+        // ENHANCEMENT: Also include dentists from waiting/in-treatment appointments who may not be in the dentist table
+        // This ensures real-time accuracy when staff members appear in appointments but not in main dentist list
+        $appointmentDentistIds = collect()
+            ->merge($inService->pluck('dentist_id'))
+            ->merge($waiting->pluck('dentist_id'))
+            ->filter()
+            ->unique();
+        
+        // Add missing dentists from appointments
+        $missingDentistIds = $appointmentDentistIds->diff($dentists->pluck('id'));
+        if ($missingDentistIds->isNotEmpty()) {
+            $appointmentDentists = Appointment::whereIn('dentist_id', $missingDentistIds)
+                ->with('dentist')
+                ->get()
+                ->pluck('dentist')
+                ->unique('id')
+                ->map(function ($dentist) use ($busyDentistIds) {
+                    return [
+                        'id' => $dentist->id,
+                        'name' => $dentist->name,
+                        'status' => $busyDentistIds->contains($dentist->id) ? 'busy' : 'available',
+                    ];
+                });
+            
+            $dentists = $dentists->merge($appointmentDentists)->unique('id');
         }
 
-        $this->assignQueueAndRoom($appointment);
+        $exceptions = $this->buildQueueExceptions($clinicLocation, $today);
 
-        // Log the check-in
+        // Get all active rooms with their status
+        $rooms = Room::where('clinic_location', $clinicLocation)
+            ->where('is_active', true)
+            ->select('id', 'room_number', 'status')
+            ->orderBy('room_number')
+            ->get()
+            ->map(function ($room) use ($inService) {
+                // Check if room is currently occupied
+                $isOccupied = $inService->where('room_id', $room->id)->isNotEmpty();
+                return [
+                    'id' => $room->id,
+                    'room_number' => $room->room_number,
+                    'status' => $isOccupied ? 'busy' : 'available',
+                ];
+            });
+
+        $currentNumber = optional($inService->first())->queue_number;
+
+        // Keep as Collections for Blade views to use ->first() and other collection methods
+        // The JSON response endpoints will handle conversion as needed
+        return [
+            'inService' => $inService,
+            'waiting' => $waiting,
+            'dentists' => $dentists,
+            'rooms' => $rooms,
+            'currentNumber' => $currentNumber,
+            'stats' => [
+                'waitingCount' => $waiting->count(),
+                'inServiceCount' => $inService->count(),
+                'disabledRoomCount' => $exceptions['disabledRooms']->count(),
+                'completedCount' => $completed,
+                'available_dentists' => $dentists->where('status', 'available')->count(),
+            ],
+            'exceptions' => $exceptions,
+            'timestamp' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    private function buildQueueExceptions(string $clinicLocation, Carbon $today): array
+    {
+        $disabledRooms = Room::where('clinic_location', $clinicLocation)
+            ->where('is_active', false)
+            ->orderBy('room_number')
+            ->get(['id', 'room_number', 'status']);
+
+        $recentCancellations = Appointment::with('queue')
+            ->whereDate('appointment_date', $today)
+            ->where('status', 'cancelled')
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function (Appointment $appointment) {
+                return [
+                    'patient_name' => $appointment->patient_name,
+                    'queue_number' => $appointment->queue?->queue_number,
+                    'cancelled_at' => optional($appointment->updated_at)->format('H:i'),
+                    'visit_code' => $appointment->visit_code,
+                ];
+            });
+
+        return [
+            'disabledRooms' => $disabledRooms,
+            'recentCancellations' => $recentCancellations,
+        ];
+    }
+
+
+    // ⚠️ REMOVED: dentistIsAvailable() - Now handled by AvailabilityService
+    // Use CalendarBookingController and AvailabilityService for availability checks
+
+    // ⚠️ REMOVED: assignQueueAndRoom() and chooseRoomForToday() 
+    // These are handled by QueueAssignmentService in the modern system
+
+    /**
+     * READONLY METHOD - Computes queue info from database WITHOUT modifying state
+     * 
+     * Returns:
+     * - Queue number (only if CHECKED_IN or later)
+     * - ETA minutes (dynamic, based on consolidated EstimatedWaitTimeService)
+     * - Current serving queue number (lowest queue IN_TREATMENT today)
+     */
+    private function computeQueueInfo(Appointment $appointment): array
+    {
+        // Only show queue number if appointment has been checked in (status >= checked_in)
+        $hasCheckedIn = in_array($appointment->status->value, [
+            Appointment::STATE_CHECKED_IN,
+            Appointment::STATE_WAITING,
+            Appointment::STATE_IN_TREATMENT,
+            Appointment::STATE_COMPLETED,
+        ]);
+        $queueNumber = $hasCheckedIn ? $appointment->queue?->queue_number : null;
+
+        // "Now Serving" = Lowest queue number currently IN_TREATMENT today
+        // Format with "A-" prefix for display (e.g., "A-02")
+        $currentServingNum = Queue::whereHas('appointment', function ($q) use ($appointment) {
+            $q->whereDate('appointment_date', $appointment->appointment_date)
+              // Exclude completed patients (they already finished)
+              ->where('status', '!=', Appointment::STATE_COMPLETED)
+              ->where('status', '!=', Appointment::STATE_FEEDBACK_SENT);
+        })
+            ->where('queue_status', 'in_treatment')
+            ->orderBy('queue_number')
+            ->first()?->queue_number;
+
+        // Format for display
+        $currentServing = $currentServingNum ? 'A-' . str_pad($currentServingNum, 2, '0', STR_PAD_LEFT) : null;
+
+        // ✅ CONSOLIDATED: Use EstimatedWaitTimeService for all ETA calculations
+        // This ensures CONSISTENCY across staff dashboard, public queue board, and patient tracking
+        // Service handles all cases: waiting, in_treatment, booked, etc.
+        $etaService = new EstimatedWaitTimeService();
+        $etaMinutes = $etaService->getETAForAppointment($appointment);
+
+        return [$queueNumber, $etaMinutes, $currentServing];
+    }
+
+    /**
+     * Validate that check-in is within allowed time window
+     * Allow check-in: 30 minutes before to 2 hours after appointment time
+     */
+    private function isWithinCheckInWindow(Appointment $appointment): array
+    {
+        $now = Carbon::now();
+        
+        // Ensure appointment is for today
+        $appointmentDateString = $appointment->appointment_date instanceof \DateTime 
+            ? $appointment->appointment_date->format('Y-m-d')
+            : $appointment->appointment_date;
+        
+        Log::info('📅 Checking appointment date', [
+            'appointmentDate' => $appointmentDateString,
+            'today' => Carbon::today()->toDateString(),
+            'match' => $appointmentDateString === Carbon::today()->toDateString()
+        ]);
+        
+        if (!$appointmentDateString || $appointmentDateString !== Carbon::today()->toDateString()) {
+            Log::info('❌ Appointment not for today', ['appointmentDate' => $appointmentDateString]);
+            return [
+                'valid' => false,
+                'message' => 'Check-in is only available on the day of your appointment.'
+            ];
+        }
+        
+        // Parse appointment time - ensure appointment_time is just the time part (H:i:s format)
+        $appointmentTime = Carbon::parse($appointmentDateString . ' ' . $appointment->appointment_time);
+        
+        // Calculate check-in window: 30 minutes before to 2 hours after
+        $checkInWindowStart = (clone $appointmentTime)->subMinutes(30);
+        $checkInWindowEnd = (clone $appointmentTime)->addHours(2);
+        
+        Log::info('⏰ Check-in window calculated', [
+            'now' => $now->format('Y-m-d H:i:s'),
+            'appointmentTime' => $appointmentTime->format('Y-m-d H:i:s'),
+            'windowStart' => $checkInWindowStart->format('Y-m-d H:i:s'),
+            'windowEnd' => $checkInWindowEnd->format('Y-m-d H:i:s'),
+            'tooEarly' => $now->lt($checkInWindowStart),
+            'tooLate' => $now->gt($checkInWindowEnd)
+        ]);
+        
+        // Check if current time is within window
+        if ($now->lt($checkInWindowStart)) {
+            // Too early - generate user-friendly message
+            $windowOpenTime = $checkInWindowStart->format('g:i A');
+            $appointmentTimeFormatted = $appointmentTime->format('g:i A');
+            $message = "Check-in opens 30 minutes before your appointment. Your appointment is at {$appointmentTimeFormatted}. Please check in after {$windowOpenTime}.";
+            Log::info('⏳ Check-in window not open (too early)', ['message' => $message]);
+            return [
+                'valid' => false,
+                'message' => $message
+            ];
+        }
+        
+        if ($now->gt($checkInWindowEnd)) {
+            $message = 'Check-in window has closed. Your appointment was at ' . $appointmentTime->format('g:i A') . '. Please contact the clinic.';
+            Log::info('⏳ Check-in window closed (too late)', ['message' => $message]);
+            return [
+                'valid' => false,
+                'message' => $message
+            ];
+        }
+        
+        Log::info('✅ Check-in window is OPEN - check-in allowed');
+        return ['valid' => true, 'message' => null];
+    }
+
+    /**
+     * Show check-in confirmation page
+     * GET /appointment/check-in/{code}
+     */
+    public function showCheckInConfirmation(string $code)
+    {
+        $appointment = Appointment::with(['service', 'dentist'])
+            ->where('visit_code', $code)
+            ->orWhere('visit_token', $code)
+            ->firstOrFail();
+
+        // If already checked in, redirect to tracking page
+        if ($appointment->checked_in_at !== null) {
+            return redirect("/track/{$appointment->visit_code}")
+                ->with('info', 'You have already checked in.');
+        }
+
+        return view('public.check-in-confirm', [
+            'appointment' => $appointment,
+        ]);
+    }
+
+    public function publicCheckIn(string $code)
+    {
+        Log::info('🔘 Check-in request received', ['code' => $code, 'ip' => request()->ip()]);
+
+        $appointment = Appointment::with(['service', 'queue', 'dentist'])
+            ->where('visit_code', $code)
+            ->orWhere('visit_token', $code)
+            ->firstOrFail();
+
+        Log::info('📋 Appointment found', ['id' => $appointment->id, 'patient' => $appointment->patient_name, 'status' => $appointment->status->value]);
+
+        // ❌ PREVENTION: Check if already checked in
+        if ($appointment->checked_in_at !== null) {
+            Log::info('⚠️  Already checked in', ['appointment_id' => $appointment->id]);
+            return redirect()->to('/track/' . $appointment->visit_code)
+                ->with('warning', 'You have already checked in. Thank you!');
+        }
+
+        // ❌ PREVENTION: Check if queue is paused - patients cannot check in when paused
+        $queueSettings = DB::table('queue_settings')->first();
+        if ($queueSettings && $queueSettings->is_paused) {
+            Log::info('⏸️  Queue paused, blocking check-in', ['appointment_id' => $appointment->id]);
+            return redirect()->to('/track/' . $appointment->visit_code)
+                ->with('error', 'Queue is currently paused. Please wait for it to resume before checking in.');
+        }
+
+        // ✅ VALIDATION: Ensure check-in is within allowed time window
+        $windowCheck = $this->isWithinCheckInWindow($appointment);
+        if (!$windowCheck['valid']) {
+            Log::info('❌ Check-in window closed', [
+                'appointment_id' => $appointment->id,
+                'message' => $windowCheck['message']
+            ]);
+            return redirect()->to('/track/' . $appointment->visit_code)
+                ->with('error', $windowCheck['message']);
+        }
+
+        Log::info('✅ All validations passed, proceeding with check-in', ['appointment_id' => $appointment->id]);
+
+        $oldStatus = $appointment->status;
+
+        // ✅ Perform check-in via state machine
+        // This transitions: BOOKED/CONFIRMED/CHECKED_IN → CHECKED_IN → WAITING
+        // onCheckedIn() handler automatically creates queue and transitions to WAITING
+        $stateService = app(AppointmentStateService::class);
+        $success = $stateService->transitionTo($appointment, 'checked_in', 'Checked in via public portal');
+        
+        if (!$success) {
+            Log::error('❌ Check-in state transition failed', ['appointment_id' => $appointment->id]);
+            return redirect()->to('/track/' . $appointment->visit_code)
+                ->with('error', 'Check-in failed. Please try again or contact the clinic.');
+        }
+
+        // CRITICAL: Refresh appointment from database to get updated status and queue
+        $appointment->refresh();
+
         ActivityLogger::log(
             'checked_in',
             'Appointment',
             $appointment->id,
             'Patient ' . $appointment->patient_name . ' checked in via public portal',
-            ['status' => $appointment->getOriginal('status')],
-            ['status' => 'arrived', 'check_in_time' => now()]
+            ['status' => $oldStatus->value],
+            ['status' => $appointment->status->value, 'check_in_time' => $appointment->checked_in_at]
         );
 
-        return redirect()->to('/track/' . $appointment->visit_code)
-            ->with('status', 'Checked in successfully.');
-    }
-
-    public function queueBoard()
-    {
-        $today = Carbon::today();
-
-        $inService = Queue::with(['appointment.dentist'])
-            ->whereHas('appointment', function ($q) use ($today) {
-                $q->whereDate('appointment_date', $today);
-            })
-            ->where('queue_status', 'in_service')
-            ->orderBy('queue_number')
-            ->get();
-
-        $waiting = Queue::with(['appointment.dentist'])
-            ->whereHas('appointment', function ($q) use ($today) {
-                $q->whereDate('appointment_date', $today);
-            })
-            ->where('queue_status', 'waiting')
-            ->orderBy('queue_number')
-            ->get();
-
-        $currentNumber = optional($inService->first())->queue_number;
-
-        return view('public.queue-board', [
-            'inService' => $inService,
-            'waiting' => $waiting,
-            'currentNumber' => $currentNumber,
-        ]);
-    }
-
-    public function findMyBookingForm()
-    {
-        return view('public.find-my-booking', [
-            'operatingHours' => OperatingHour::all(),
-        ]);
-    }
-
-    public function findMyBookingSubmit(Request $request)
-    {
-        $data = $request->validate([
-            'phone' => 'required|string',
-        ]);
-
-        $phone = preg_replace('/[^0-9]/', '', $data['phone']);
-        $today = Carbon::today();
-
-        // Search for today's or upcoming appointments only (safety: no past data)
-        $appointment = Appointment::where(function ($q) use ($phone) {
-            $q->where('patient_phone', 'LIKE', '%' . $phone . '%')
-              ->orWhere('patient_phone', 'LIKE', '%' . substr($phone, -8) . '%'); // match last 8 digits
-        })
-        ->where(function ($q) use ($today) {
-            $q->whereDate('appointment_date', '>=', $today);
-        })
-        ->orderBy('appointment_date')
-        ->orderBy('appointment_time')
-        ->first();
-
-        if (!$appointment) {
-            return back()
-                ->with('error', 'No upcoming booking found for this phone number. Please check and try again.')
-                ->withInput();
+        // Check if queue is paused and flash pause message if needed
+        $queueSettings = DB::table('queue_settings')->first();
+        if ($queueSettings && $queueSettings->is_paused && $appointment->queue) {
+            return redirect()->to('/track/' . $appointment->visit_code)
+                ->with('pause_alert', "Queue is currently paused. You are #{$appointment->queue->queue_number} in queue. Staff will call you when queue resumes.");
         }
 
-        // Redirect to track page
-        return redirect()->to('/track/' . $appointment->visit_code)
-            ->with('status', 'Booking found! Here is your appointment.');
-    }
-
-    private function dentistIsAvailable(int $dentistId, Carbon $startAt, Carbon $endAt): bool
-    {
-        $schedule = DentistSchedule::where('dentist_id', $dentistId)
-            ->where('day_of_week', $startAt->format('l'))
-            ->first();
-
-        if (!$schedule || !$schedule->is_available) {
-            return false;
-        }
-
-        if ($schedule->start_time && $schedule->end_time) {
-            $dayStart = Carbon::parse($startAt->toDateString() . ' ' . $schedule->start_time);
-            $dayEnd = Carbon::parse($startAt->toDateString() . ' ' . $schedule->end_time);
-            if ($startAt->lt($dayStart) || $endAt->gt($dayEnd)) {
-                return false;
-            }
-        }
-
-        $overlap = Appointment::where('dentist_id', $dentistId)
-            ->whereDate('appointment_date', $startAt->toDateString())
-            ->whereIn('status', ['booked'])
-            ->where(function ($query) use ($startAt, $endAt) {
-                $query->where(function ($q) use ($startAt, $endAt) {
-                    $q->where('start_at', '<', $endAt)->where('end_at', '>', $startAt);
-                })->orWhere(function ($q) use ($startAt, $endAt) {
-                    $q->whereNull('start_at')
-                        ->whereTime('appointment_time', '<', $endAt->format('H:i:s'))
-                        ->whereTime('appointment_time', '>', $startAt->format('H:i:s'));
-                });
-            })
-            ->exists();
-
-        return !$overlap;
-    }
-
-    private function assignQueueAndRoom(Appointment $appointment): void
-    {
-        $now = Carbon::now();
-
-        if (!$appointment->checked_in_at) {
-            $appointment->checked_in_at = $now;
-        }
-
-        $queue = Queue::firstOrNew(['appointment_id' => $appointment->id]);
-        if (!$queue->queue_number) {
-            $queue->queue_number = Queue::nextNumberForDate($appointment->appointment_date);
-        }
-        
-        // Check if anyone is currently in service today
-        $inServiceCount = Queue::whereHas('appointment', function ($q) use ($appointment) {
-            $q->whereDate('appointment_date', $appointment->appointment_date);
-        })->where('queue_status', 'in_service')->count();
-        
-        // Auto-start service if no one is currently being served
-        $queue->queue_status = $inServiceCount === 0 ? 'in_service' : 'waiting';
-        $queue->check_in_time = $now;
-        $queue->save();
-
-        if (!$appointment->room) {
-            $appointment->room = $this->chooseRoomForToday($appointment->appointment_date);
-        }
-
-        $appointment->status = 'checked_in';
-        $appointment->save();
-    }
-
-    private function chooseRoomForToday($date): string
-    {
-        $todayQueues = Queue::whereHas('appointment', function ($q) use ($date) {
-            $q->whereDate('appointment_date', $date);
-        })->with('appointment')->get();
-
-        $room1 = $todayQueues->filter(fn($q) => optional($q->appointment)->room == '1')->count();
-        $room2 = $todayQueues->filter(fn($q) => optional($q->appointment)->room == '2')->count();
-
-        return $room1 <= $room2 ? '1' : '2';
-    }
-
-    private function computeQueueInfo(Appointment $appointment): array
-    {
-        $queueNumber = $appointment->queue?->queue_number;
-        $queueStatus = $appointment->queue?->queue_status ?? 'not-queued';
-
-        $serviceDuration = max((int) ($appointment->service->estimated_duration ?? 0), 15);
-
-        // Current serving is lowest in_service queue today
-        $currentServing = Queue::whereHas('appointment', function ($q) use ($appointment) {
-            $q->whereDate('appointment_date', $appointment->appointment_date);
-        })->where('queue_status', 'in_service')->orderBy('queue_number')->first()?->queue_number;
-
-        $etaMinutes = null;
-        if ($queueNumber) {
-            $ahead = Queue::whereHas('appointment', function ($q) use ($appointment) {
-                $q->whereDate('appointment_date', $appointment->appointment_date);
-            })
-                ->where('queue_status', 'waiting')
-                ->where('queue_number', '<', $queueNumber)
-                ->count();
-
-            $etaMinutes = $ahead * $serviceDuration;
-        }
-
-        return [$queueNumber, $queueStatus, $etaMinutes, $currentServing];
-    }
-
-    public function visitLookup(Request $request)
-    {
-        $phone = $request->query('phone');
-        $date = $request->query('date');
-
-        $found = false;
-        $appointment = null;
-
-        // Search for appointment matching phone and date
-        if ($phone && $date) {
-            $appointment = Appointment::where('patient_phone', $phone)
-                ->whereDate('appointment_date', $date)
-                ->first();
-
-            if ($appointment) {
-                $found = true;
-            }
-        }
-
-        return view('public.visit-lookup', [
-            'found' => $found,
-            'appointment' => $appointment,
-            'operatingHours' => OperatingHour::all(),
-        ]);
-    }
-
-    public function publicCheckIn(string $token)
-    {
-        $appointment = Appointment::with(['service', 'queue', 'dentist'])
-            ->where('visit_token', $token)
-            ->firstOrFail();
-
-        $now = Carbon::now();
-
-        // Mark checked in
-        if (!$appointment->checked_in_at) {
-            $appointment->checked_in_at = $now;
-            $appointment->save();
-        }
-
-        // Ensure queue exists and is active for today
-        if (Carbon::parse($appointment->appointment_date)->isToday()) {
-            if (!$appointment->queue) {
-                $serviceDuration = max((int) ($appointment->service->estimated_duration ?? 0), 15);
-                $queueNumber = Queue::nextNumberForDate($appointment->appointment_date);
-                Queue::updateOrCreate(
-                    ['appointment_id' => $appointment->id],
-                    [
-                        'queue_number' => $queueNumber,
-                        'queue_status' => 'waiting',
-                        'check_in_time' => $now,
-                    ]
-                );
-            }
-        }
-
-        return redirect()->to('/visit/' . $appointment->visit_token)
-            ->with('status', 'You have been checked in.');
+        return redirect()->to('/track/' . $appointment->visit_code);
     }
 
     public function trackByCodeApi(string $code)
@@ -481,22 +511,204 @@ class AppointmentController extends Controller
             ->where('visit_code', $code)
             ->firstOrFail();
 
-        [$queueNumber, $queueStatus, $etaMinutes, $currentServing] = $this->computeQueueInfo($appointment);
-        $room = $appointment->room ?? '—';
+        [$queueNumber, $etaMinutes, $currentServing] = $this->computeQueueInfo($appointment);
+
+        // Only show queue number if CHECKED_IN or later
+        $showQueueNumber = in_array($appointment->status->value, [
+            Appointment::STATE_CHECKED_IN,
+            Appointment::STATE_WAITING,
+            Appointment::STATE_IN_TREATMENT,
+            Appointment::STATE_COMPLETED,
+        ]);
+
+        // Only show room/dentist if IN_TREATMENT
+        $showTreatmentInfo = $appointment->status->value === Appointment::STATE_IN_TREATMENT;
+
+        // Check queue pause status
+        $queueSettings = DB::table('queue_settings')->first();
+        $isPaused = $queueSettings?->is_paused ?? false;
+        $pauseMessage = null;
+        
+        if ($isPaused && $showQueueNumber && $queueNumber) {
+            $pauseMessage = "Queue is currently paused. You are #{$queueNumber} in queue. Staff will call you when queue resumes.";
+        }
 
         return response()->json([
-            'appointment' => [
-                'patient_name' => $appointment->patient_name,
-                'patient_phone' => $appointment->patient_phone,
-                'service' => $appointment->service?->name ?? $appointment->service?->service_name ?? '—',
-                'dentist' => $appointment->dentist?->name ?? 'TBD',
-                'checked_in_at' => $appointment->checked_in_at?->format('Y-m-d H:i:s'),
-            ],
-            'queueNumber' => $queueNumber,
-            'queueStatus' => $queueStatus,
-            'etaMinutes' => $etaMinutes,
-            'currentServing' => $currentServing,
-            'room' => $room,
+            'patient_name' => $appointment->patient_name,
+            'service' => $appointment->service?->name ?? $appointment->service?->service_name ?? '—',
+            'dentist' => $showTreatmentInfo ? ($appointment->dentist?->name ?? 'TBD') : null,
+            'status' => $appointment->status->value,  // ← FIX: Return string value, not Enum object
+            'queue_number' => $showQueueNumber ? $queueNumber : null,
+            'eta_minutes' => $etaMinutes,
+            'current_serving' => $currentServing,
+            'room' => $showTreatmentInfo ? ($appointment->room ?? '—') : null,
+            'queue_paused' => $isPaused,
+            'pause_message' => $pauseMessage,
         ]);
+    }
+
+    /**
+     * TEST: Create a test appointment for feedback testing
+     */
+    public function testFeedbackSetup(Request $request)
+    {
+        $phone = $request->validate(['phone' => 'required|string'])['phone'];
+        
+        $service = Service::where('status', 1)->first();
+        $dentist = Dentist::where('status', 1)->first();
+        
+        if (!$service || !$dentist) {
+            return back()->with('error', 'No services or dentists available. Please set up clinic data first.');
+        }
+        
+        $appointment = Appointment::create([
+            'patient_name' => 'Test Patient ' . now()->format('Hi'),
+            'patient_phone' => $phone,
+            'patient_email' => 'test-' . now()->timestamp . '@example.com',
+            'service_id' => $service->id,
+            'dentist_id' => $dentist->id,
+            'appointment_date' => now(),
+            'appointment_time' => now(),
+            'clinic_location' => 'seremban',
+            'status' => 'in_treatment',
+            'visit_code' => 'VTEST' . strtoupper(substr(uniqid(), -6)),
+        ]);
+        
+        return back()->with('success', "Test appointment created: {$appointment->visit_code}. Click 'Complete' to send feedback link.");
+    }
+
+    /**
+     * TEST: Mark appointment as completed and send feedback link
+     */
+    public function testFeedbackComplete(Request $request)
+    {
+        $appointmentId = $request->validate(['appointment_id' => 'required|exists:appointments,id'])['appointment_id'];
+        
+        $appointment = Appointment::findOrFail($appointmentId);
+        
+        // Update status to completed (this triggers the state machine)
+        $appointment->update(['status' => 'completed']);
+        
+        // The AppointmentStateService should handle sending the feedback link
+        // But for testing, we'll send it directly
+        try {
+            $whatsAppSender = new \App\Services\WhatsAppSender();
+            $whatsAppSender->sendFeedbackLink($appointment);
+            
+            $message = "✅ WhatsApp feedback link sent to {$appointment->patient_phone}! ";
+            $message .= "You should receive it in WhatsApp within 10 seconds.";
+        } catch (\Exception $e) {
+            $message = "⚠️ WhatsApp not configured. But feedback form is still accessible via direct link. ";
+            $message .= "Visit code: {$appointment->visit_code}";
+        }
+        
+        return back()->with('success', $message);
+    }
+
+    /**
+     * POST /api/queue-board/reassign-dentist
+     * Reassign dentist to a waiting patient (emergency/manual override)
+     * 
+     * Only allows reassignment for waiting patients
+     * Updates both Appointment.dentist_id and Queue.dentist_id
+     * Logs the change for audit trail
+     */
+    public function reassignDentist(Request $request)
+    {
+        try {
+            $appointmentId = $request->input('appointment_id');
+            $dentistId = $request->input('dentist_id');
+
+            // Validate inputs
+            if (!$appointmentId || !$dentistId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing appointment_id or dentist_id'
+                ], 400);
+            }
+
+            // Get the appointment
+            $appointment = Appointment::findOrFail($appointmentId);
+
+            // CRITICAL: Only allow reassignment for waiting patients
+            if ($appointment->status->value !== 'waiting') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Can only reassign waiting patients. Current status: ' . $appointment->status->value
+                ], 403);
+            }
+
+            // Verify clinic location matches
+            $clinicLocation = config('clinic.location', 'seremban');
+            if ($appointment->clinic_location !== $clinicLocation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot reassign patient from different clinic'
+                ], 403);
+            }
+
+            // Verify dentist exists
+            $dentist = Dentist::findOrFail($dentistId);
+
+            // Get the queue record
+            $queue = Queue::where('appointment_id', $appointmentId)->first();
+            if (!$queue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Queue record not found for appointment'
+                ], 404);
+            }
+
+            // Update appointment dentist
+            $oldDentistId = $appointment->dentist_id;
+            $appointment->update(['dentist_id' => $dentistId]);
+
+            // Update queue dentist
+            $queue->update(['dentist_id' => $dentistId]);
+
+            // Log the change for audit trail
+            if (class_exists(ActivityLogger::class)) {
+                $logger = app(ActivityLogger::class);
+                $logger->log(
+                    auth()->user()->id,
+                    'dentist_reassignment',
+                    'appointment',
+                    $appointmentId,
+                    [
+                        'old_dentist_id' => $oldDentistId,
+                        'new_dentist_id' => $dentistId,
+                        'old_dentist_name' => optional(Dentist::find($oldDentistId))->name ?? 'Unassigned',
+                        'new_dentist_name' => $dentist->name,
+                        'patient_name' => $appointment->patient_name,
+                        'reason' => $request->input('reason', 'Manual reassignment'),
+                    ]
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "✅ Reassigned to {$dentist->name}",
+                'appointment_id' => $appointmentId,
+                'dentist_id' => $dentistId,
+                'dentist_name' => $dentist->name
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Appointment or Dentist not found'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error reassigning dentist', [
+                'appointment_id' => $appointmentId ?? null,
+                'dentist_id' => $dentistId ?? null,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error reassigning dentist: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

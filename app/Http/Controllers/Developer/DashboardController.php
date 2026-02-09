@@ -13,6 +13,11 @@ class DashboardController extends Controller
      */
     public function index()
     {
+        // Developer only
+        if (auth()->user()->role !== 'developer') {
+            abort(403, 'Unauthorized');
+        }
+        
         // Get statistics
         $totalLogs = ActivityLog::count();
         $logsToday = ActivityLog::whereDate('created_at', today())->count();
@@ -99,16 +104,32 @@ class DashboardController extends Controller
 
     /**
      * Show system info
+     * MEDIUM-002 FIX: Limit sensitive system information disclosure
+     * Only show non-sensitive configuration details
      */
     public function systemInfo()
     {
+        // HIGH-008 FIX: Consistent developer role check via middleware only
+        // This controller is already protected by route middleware
+        // No additional inline checks needed
+        
         $info = [
+            // Application info (safe)
             'app_name' => config('app.name'),
             'app_env' => config('app.env'),
             'app_debug' => config('app.debug'),
             'laravel_version' => app()->version(),
             'php_version' => phpversion(),
+            
+            // Database info (safe - general only)
             'database' => config('database.default'),
+            
+            // Omit for security:
+            // - database.connections.mysql.host (MEDIUM-002 FIX)
+            // - database.connections.mysql.user (MEDIUM-002 FIX)
+            // - database.connections.mysql.password (MEDIUM-002 FIX)
+            // - API keys or secrets
+            // - file paths leading to app root
         ];
 
         return view('developer.tools.system-info', compact('info'));

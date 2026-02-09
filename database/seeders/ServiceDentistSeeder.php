@@ -45,7 +45,7 @@ class ServiceDentistSeeder extends Seeder
         );
 
         Service::firstOrCreate(
-            ['name' => 'Root Canal Treatment'],
+            ['name' => 'Root Canal'],
             [
                 'description' => 'Specialized endodontic treatment to save infected or damaged teeth and relieve pain.',
                 'price' => 300.00,

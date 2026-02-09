@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Appointment;
+use App\Models\Queue;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ class WhatsAppSender
             "Your appointment is confirmed for {$dateStr}, {$timeStr}.\n\n";
 
         if ($includeTrackingLink) {
-            $trackUrl = url('/visit/' . $appointment->visit_token);
+            $trackUrl = url('/track/' . $appointment->visit_code);
             $message .= "👉 Track your visit & queue here:\n{$trackUrl}\n\n" .
                        "Please tap the link when you arrive at the clinic.";
         } else {
@@ -51,7 +52,7 @@ class WhatsAppSender
     }
 
     /**
-     * Send reminder with tracking & check-in links to patients with appointments today
+     * Send reminder with tracking link to patients with appointments today
      */
     public function sendAppointmentReminderToday(Appointment $appointment): void
     {
@@ -69,15 +70,13 @@ class WhatsAppSender
 
         $timeStr = Str::of($appointment->appointment_time)->substr(0, 5);
         $name = $appointment->patient_name;
-        $trackUrl = url('/visit/' . $appointment->visit_token);
-        $checkInUrl = url('/checkin?token=' . $appointment->visit_token);
+        $trackUrl = url('/track/' . $appointment->visit_code);
 
         $message = "🦷 Appointment Today!\n\n" .
             "Hi {$name},\n" .
             "Your appointment is at {$timeStr} today.\n\n" .
-            "📍 Track Queue:\n{$trackUrl}\n\n" .
-            "✅ Quick Check-In:\n{$checkInUrl}\n\n" .
-            "Tap the links when you're ready. See you soon! 😊";
+            "👉 Track your visit & queue:\n{$trackUrl}\n\n" .
+            "Tap the link when you're ready. See you soon! 😊";
 
         $this->sendMessage($to, $message, $phoneId, $token);
     }
@@ -132,6 +131,76 @@ class WhatsAppSender
     }
 
     /**
+     * Send appointment cancellation notification
+     */
+    public function sendAppointmentCancellation(Appointment $appointment, ?string $reason = null): void
+    {
+        $token = config('services.whatsapp.token');
+        $phoneId = config('services.whatsapp.phone_id');
+
+        if (!$token || !$phoneId) {
+            return;
+        }
+
+        $to = $this->formatMsisdn($appointment->patient_phone);
+        if (!$to) {
+            return;
+        }
+
+        $dateStr = optional($appointment->appointment_date)->format('d M Y');
+        $timeStr = Str::of($appointment->appointment_time)->substr(0, 5);
+        $name = $appointment->patient_name;
+
+        $message = "🦷 Appointment Cancelled\n\n" .
+            "Hi {$name},\n" .
+            "Your appointment scheduled for {$dateStr} at {$timeStr} has been cancelled.\n\n";
+
+        if ($reason) {
+            $message .= "Reason: {$reason}\n\n";
+        }
+
+        $message .= "📞 If you have any questions, please contact us:\n" .
+            "Phone: 06-677 1940\n\n" .
+            "We look forward to serving you again soon! 😊";
+
+        $this->sendMessage($to, $message, $phoneId, $token);
+    }
+
+    /**
+     * Notify the patient that their queue number was called
+     */
+    public function sendQueueCallNotification(Appointment $appointment, Queue $queue): void
+    {
+        $token = config('services.whatsapp.token');
+        $phoneId = config('services.whatsapp.phone_id');
+
+        if (!$token || !$phoneId) {
+            return;
+        }
+
+        $to = $this->formatMsisdn($appointment->patient_phone);
+        if (!$to) {
+            return;
+        }
+
+        $queueLabel = $queue->queue_number ? 'A-' . str_pad($queue->queue_number, 2, '0', STR_PAD_LEFT) : '—';
+        $roomLabel = $queue->room?->room_number ?? 'Room assigned shortly';
+        $dentistLabel = $queue->dentist?->name ?? 'next available dentist';
+        $trackUrl = url('/track/' . $appointment->visit_code);
+        $name = $appointment->patient_name;
+
+        $message = "🦷 You're next in line!\n\n" .
+            "Hi {$name},\n" .
+            "Queue {$queueLabel} is now being called.\n" .
+            "Room: {$roomLabel}\n" .
+            "Dentist: {$dentistLabel}\n\n" .
+            "Track your position: {$trackUrl}\n\n" .
+            "Please proceed to the reception desk so we can welcome you. 😊";
+
+        $this->sendMessage($to, $message, $phoneId, $token);
+    }
+
+    /**
      * Send feedback link 1 hour after treatment completion
      */
     public function sendFeedbackLink(Appointment $appointment): void
@@ -149,7 +218,8 @@ class WhatsAppSender
         }
 
         $name = $appointment->patient_name;
-        $feedbackUrl = url('/feedback?code=' . $appointment->visit_code);
+        // Use visit_code for consistency with new track page
+        $feedbackUrl = url('/feedback?code=' . urlencode($appointment->visit_code));
 
         $message = "🦷 Thank You for Your Visit!\n\n" .
             "Hi {$name},\n" .
@@ -177,11 +247,101 @@ class WhatsAppSender
             ];
 
             $response = Http::withToken($token)->post($endpoint, $payload);
-            return $response->successful();
+            
+            if (!$response->successful()) {
+                $errorBody = $response->json() ?? ['error' => 'Unknown error'];
+                \Log::error('WhatsApp API error', [
+                    'status' => $response->status(),
+                    'phone_id' => $phoneId,
+                    'to' => $to,
+                    'error_details' => $errorBody,
+                    'message_length' => strlen($body)
+                ]);
+                return false;
+            }
+            
+            return true;
         } catch (\Throwable $e) {
-            \Log::error('WhatsApp message failed', ['error' => $e->getMessage()]);
+            \Log::error('WhatsApp connection failed', [
+                'exception' => get_class($e),
+                'error' => $e->getMessage(),
+                'to' => $to
+            ]);
             return false;
         }
+    }
+
+    /**
+     * Send treatment start message with room location (when appointment transitions to IN_TREATMENT)
+     */
+    public function sendTreatmentStartMessage(
+        string $phone,
+        string $patientName,
+        ?string $queueNumber,
+        ?string $room
+    ): void {
+        $token = config('services.whatsapp.token');
+        $phoneId = config('services.whatsapp.phone_id');
+
+        if (!$token || !$phoneId) {
+            return;
+        }
+
+        $to = $this->formatMsisdn($phone);
+        if (!$to) {
+            return;
+        }
+
+        $message = "🦷 Your Turn! Please Proceed\n\n";
+        $message .= "Hi {$patientName},\n";
+        $message .= "You're now being served.\n\n";
+
+        if ($queueNumber) {
+            $message .= "Queue #: {$queueNumber}\n";
+        }
+
+        if ($room) {
+            $message .= "Room: {$room}\n";
+        }
+
+        $message .= "\nPlease proceed to the designated room immediately.\n" .
+                   "Thank you! 😊";
+
+        // Note: $to is already formatted by formatMsisdn(), so call sendMessage directly
+        $this->sendMessage($to, $message, $phoneId, $token);
+    }
+
+    /**
+     * Send rescheduling confirmation to patient
+     */
+    public function sendRescheduleConfirmation(Appointment $appointment): void
+    {
+        $token = config('services.whatsapp.token');
+        $phoneId = config('services.whatsapp.phone_id');
+
+        if (!$token || !$phoneId) {
+            return;
+        }
+
+        $to = $this->formatMsisdn($appointment->patient_phone);
+        if (!$to) {
+            return;
+        }
+
+        $dateStr = optional($appointment->appointment_date)->format('d M Y');
+        $timeStr = Str::of($appointment->appointment_time)->substr(0, 5);
+        $name = $appointment->patient_name;
+        $trackUrl = url('/track/' . $appointment->visit_code);
+
+        $message = "🦷 Appointment Rescheduled\n\n" .
+            "Hi {$name},\n" .
+            "Your appointment has been successfully rescheduled.\n\n" .
+            "📅 New Date & Time: {$dateStr}, {$timeStr}\n" .
+            "🏥 Clinic: " . ucfirst($appointment->clinic_location) . "\n\n" .
+            "👉 Track your appointment:\n{$trackUrl}\n\n" .
+            "Please arrive 5-10 minutes early. See you soon! 😊";
+
+        $this->sendMessage($to, $message, $phoneId, $token);
     }
 
     private function formatMsisdn(?string $raw): ?string

@@ -9,11 +9,9 @@
     <div class="collapse navbar-collapse" id="navbarCollapse">
         <div class="navbar-nav ms-auto py-0">
             <a href="{{ url('/') }}" class="nav-item nav-link {{ request()->is('/') ? 'active' : '' }}">Home</a>
-            <a href="{{ url('/about') }}" class="nav-item nav-link {{ request()->is('about') ? 'active' : '' }}">About</a>
-            <a href="{{ url('/services') }}" class="nav-item nav-link {{ request()->is('services') ? 'active' : '' }}">Service</a>
-            <a href="{{ url('/dentists') }}" class="nav-item nav-link {{ request()->is('dentists') ? 'active' : '' }}">Dentist</a>
-            <a href="{{ url('/hours') }}" class="nav-item nav-link {{ request()->is('hours') ? 'active' : '' }}">Hours</a>
-            <a href="{{ url('/contact') }}" class="nav-item nav-link {{ request()->is('contact') ? 'active' : '' }}">Contact</a>
+            <a href="{{ url('/services') }}" class="nav-item nav-link {{ request()->is('services') ? 'active' : '' }}">Services</a>
+            <a href="{{ url('/dentists') }}" class="nav-item nav-link {{ request()->is('dentists') ? 'active' : '' }}">Dentists</a>
+            <a href="{{ url('/track') }}" class="nav-item nav-link {{ request()->is('track*') ? 'active' : '' }}">Track Visit</a>
         </div>
         <a href="{{ url('/book') }}" class="btn btn-primary py-2 px-4 ms-3">Book Appointment</a>
     </div>

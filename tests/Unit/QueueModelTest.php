@@ -130,7 +130,7 @@ class QueueModelTest extends TestCase
 
         $queue = Queue::create(['appointment_id' => $apt->id, 'queue_number' => 1, 'queue_status' => 'waiting']);
         
-        $queue->update(['queue_status' => 'in_service']);
+        $queue->update(['queue_status' => 'in_treatment']);
         $this->assertEquals('in_service', $queue->queue_status);
     }
 

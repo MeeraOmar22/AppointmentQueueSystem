@@ -150,7 +150,7 @@ class QueueManagementFeatureTest extends TestCase
         Queue::create([
             'appointment_id' => $appointment->id,
             'queue_number' => 1,
-            'queue_status' => 'checked_in',
+            'queue_status' => 'called',
             'check_in_time' => now(),
         ]);
 

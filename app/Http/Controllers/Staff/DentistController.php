@@ -63,6 +63,20 @@ class DentistController extends Controller
         $dentist = Dentist::findOrFail($id);
         $oldValues = $dentist->toArray();
 
+        // For AJAX requests with only status, allow partial update
+        if ($request->expectsJson() && $request->has('status') && !$request->has('name')) {
+            $data = $request->validate([
+                'status' => 'required|boolean',
+            ]);
+            
+            $dentist->update($data);
+            
+            ActivityLogger::log('updated', 'Dentist', $dentist->id, "Updated dentist status: {$dentist->name}", $oldValues, $dentist->fresh()->only(['status']));
+            
+            return response()->json(['message' => 'Dentist updated successfully.']);
+        }
+
+        // Full update validation
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -95,6 +109,10 @@ class DentistController extends Controller
 
         ActivityLogger::log('updated', 'Dentist', $dentist->id, "Updated dentist: {$dentist->name}", $oldValues, $dentist->fresh()->toArray());
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Dentist updated successfully.']);
+        }
+
         return redirect('/staff/dentists')->with('success', 'Dentist updated successfully.');
     }
 
@@ -114,6 +132,11 @@ class DentistController extends Controller
             $old,
             $dentist->fresh()->toArray()
         );
+
+        // Return JSON for AJAX requests, redirect for form submissions
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Dentist deactivated successfully.']);
+        }
 
         return redirect('/staff/dentists')->with('success', 'Dentist deactivated successfully.');
     }
@@ -211,27 +234,10 @@ class DentistController extends Controller
      */
     public function stats()
     {
-        $dentists = Dentist::with('currentQueue')->get();
+        $dentists = Dentist::all();
 
         return response()->json([
-            'success' => true,
-            'timestamp' => now()->toIso8601String(),
-            'total_dentists' => $dentists->count(),
-            'available' => $dentists->where('status', 'available')->count(),
-            'busy' => $dentists->where('status', 'busy')->count(),
-            'on_break' => $dentists->where('status', 'on_break')->count(),
-            'off' => $dentists->where('status', 'off')->count(),
-            'dentists' => $dentists->map(function (Dentist $dentist) {
-                return [
-                    'id' => $dentist->id,
-                    'name' => $dentist->name,
-                    'status' => $dentist->status ?? 'available',
-                    'current_patient' => $dentist->currentQueue?->appointment?->patient_name,
-                    'patients_in_queue' => $dentist->queues()
-                        ->where('queue_status', 'waiting')
-                        ->count(),
-                ];
-            }),
+            'data' => $dentists,
         ]);
     }
 }

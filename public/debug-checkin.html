@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-In Form Submission Debug</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }
+        h1, h2 { color: #333; }
+        .section { background: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #0d6efd; border-radius: 4px; }
+        .code { background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto; font-family: monospace; }
+        .step { margin: 15px 0; padding: 15px; background: #fff3cd; border-radius: 4px; }
+        .success { background: #d1e7dd; border-left-color: #198754; }
+        .error { background: #f8d7da; border-left-color: #dc3545; }
+        .warning { background: #fff3cd; border-left-color: #ffc107; }
+        button { padding: 10px 20px; background: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0b5ed7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Check-In Form Submission Debug Guide</h1>
+        
+        <div class="section success">
+            <h2>✅ What Just Changed</h2>
+            <p>Added form submission logging to the Check-In button. Now when you click it, you'll see detailed debug information in the console.</p>
+        </div>
+
+        <div class="section">
+            <h2>📋 Step-by-Step Test Instructions</h2>
+            
+            <div class="step">
+                <strong>Step 1: Open the Tracking Page</strong>
+                <p>Go to: <code>http://127.0.0.1:8000/track/DNT-20260206-001</code></p>
+            </div>
+
+            <div class="step">
+                <strong>Step 2: Open Browser Console</strong>
+                <p>Press <code>F12</code> on Windows/Linux or <code>Cmd+Option+J</code> on Mac</p>
+                <p>Click the <strong>Console</strong> tab</p>
+            </div>
+
+            <div class="step">
+                <strong>Step 3: Scroll Down to Check-In Button</strong>
+                <p>Look for the green <strong>"Check In"</strong> button at the bottom</p>
+            </div>
+
+            <div class="step">
+                <strong>Step 4: Click Check-In Button</strong>
+                <p>Click the green button and immediately look at the console</p>
+            </div>
+
+            <div class="step">
+                <strong>Step 5: Read Console Output</strong>
+                <p>You should see logs like:</p>
+                <div class="code">
+🔘 Check-In button clicked<br/>
+📝 Form target: http://127.0.0.1:8000/appointment/check-in/DNT-20260206-001<br/>
+📤 Preparing to submit form to: http://127.0.0.1:8000/appointment/check-in/DNT-20260206-001<br/>
+✅ CSRF token found<br/>
+📋 Form data being sent: {csrf: "present", action: "......"}<br/>
+✅ Allowing form submission to proceed...
+                </div>
+            </div>
+        </div>
+
+        <div class="section warning">
+            <h2>⚠️ Important: What to Look For</h2>
+            
+            <h3>If you see ALL the logs above:</h3>
+            <ul>
+                <li>✅ Form is submitting correctly</li>
+                <li>✅ CSRF token is present</li>
+                <li>The page will reload...</li>
+                <li>Look for RED error box at TOP of page after reload</li>
+            </ul>
+
+            <h3>If button click does NOTHING:</h3>
+            <ul>
+                <li>❌ JavaScript is not running</li>
+                <li>Try: Refresh page (Ctrl+F5)</li>
+                <li>Try: Clear browser cache</li>
+                <li>Try: Different browser</li>
+            </ul>
+
+            <h3>If you see "CSRF token not found":</h3>
+            <ul>
+                <li>❌ Form is malformed</li>
+                <li>Check page source (Ctrl+U) for @csrf token</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Real-Time Test</h2>
+            <p>You can test the error message display here:</p>
+            <button onclick="testErrorDisplay()">Test Error Display</button>
+            <div id="testOutput"></div>
+        </div>
+
+        <div class="section error">
+            <h2>❌ If Error Message Still Doesn't Show</h2>
+            <ol>
+                <li>Check <strong>Network tab</strong> (F12 → Network)
+                    <ul>
+                        <li>Click button</li>
+                        <li>Look for POST to <code>/appointment/check-in/DNT-20260206-001</code></li>
+                        <li>Status should be <strong>302</strong> (redirect)</li>
+                    </ul>
+                </li>
+                <li>Check the <strong>Response</strong> tab of that request
+                    <ul>
+                        <li>Should contain: <code>alert alert-danger</code></li>
+                    </ul>
+                </li>
+                <li>Check <strong>Console</strong> for any JavaScript errors
+                    <ul>
+                        <li>Look for red error messages</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="section success">
+            <h2>✅ Next Steps</h2>
+            <ol>
+                <li>Go to the tracking page</li>
+                <li>Open console (F12)</li>
+                <li>Click Check-In button</li>
+                <li><strong>Share the console output</strong> you see (copy the logs)</li>
+                <li>Let me know if the error message appears or not</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function testErrorDisplay() {
+            const output = document.getElementById('testOutput');
+            output.innerHTML = `
+                <div style="margin-top: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-left: 5px solid #dc3545; padding: 15px; border-radius: 4px;">
+                    <strong style="font-size: 1.1rem; color: #721c24;">✗ Cannot Check In</strong>
+                    <div style="margin-top: 10px; line-height: 1.6; color: #721c24;">
+                        Check-in opens 30 minutes before your appointment. Your appointment is at 3:15 PM. Please check in after 2:45 PM.
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

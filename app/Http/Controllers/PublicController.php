@@ -12,14 +12,14 @@ class PublicController extends Controller
     public function home()
     {
         return view('public.home', [
-            'operatingHours' => OperatingHour::all()
+            'operatingHours' => OperatingHour::orderBy('day_of_week')->orderBy('start_time')->get()
         ]);
     }
 
     public function about()
     {
         return view('public.about', [
-            'operatingHours' => OperatingHour::all()
+            'operatingHours' => OperatingHour::orderBy('day_of_week')->orderBy('start_time')->get()
         ]);
     }
 
@@ -27,7 +27,7 @@ class PublicController extends Controller
     {
         return view('public.services', [
             'services' => Service::where('status', 1)->get(),
-            'operatingHours' => OperatingHour::all()
+            'operatingHours' => OperatingHour::orderBy('day_of_week')->orderBy('start_time')->get()
         ]);
     }
 
@@ -35,7 +35,7 @@ class PublicController extends Controller
     {
         return view('public.dentists', [
             'dentists' => Dentist::where('status', 1)->get(),
-            'operatingHours' => OperatingHour::all()
+            'operatingHours' => OperatingHour::orderBy('day_of_week')->orderBy('start_time')->get()
         ]);
     }
 
@@ -51,7 +51,7 @@ class PublicController extends Controller
             ->orderBy('name')
             ->get();
         return view('public.contact', [
-            'operatingHours' => OperatingHour::all(),
+            'operatingHours' => OperatingHour::orderBy('day_of_week')->orderBy('start_time')->get(),
             'staff' => $staff,
         ]);
     }

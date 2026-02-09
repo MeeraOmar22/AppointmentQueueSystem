@@ -16,7 +16,6 @@
                 <h3 class="text-white mb-4">Popular Links</h3>
                 <div class="d-flex flex-column justify-content-start">
                     <a class="text-light mb-2" href="{{ url('/book') }}"><i class="bi bi-arrow-right text-primary me-2"></i>Book Appointment</a>
-                    <a class="text-light mb-2" href="{{ url('/find-my-booking') }}"><i class="bi bi-arrow-right text-primary me-2"></i>Find My Booking</a>
                     <a class="text-light mb-2" href="{{ url('/services') }}"><i class="bi bi-arrow-right text-primary me-2"></i>Our Services</a>
                     <a class="text-light mb-2" href="{{ url('/about') }}"><i class="bi bi-arrow-right text-primary me-2"></i>About Us</a>
                     <a class="text-light" href="{{ url('/contact') }}"><i class="bi bi-arrow-right text-primary me-2"></i>Contact Us</a>

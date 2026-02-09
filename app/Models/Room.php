@@ -11,10 +11,12 @@ class Room extends Model
         'capacity',
         'status',
         'clinic_location',
+        'is_active',
     ];
 
     protected $casts = [
         'capacity' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -57,5 +59,37 @@ class Room extends Model
     public function markAvailable(): void
     {
         $this->update(['status' => 'available']);
+    }
+
+    /**
+     * Check if room is active (can receive assignments)
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active;
+    }
+
+    /**
+     * Scope query to only active rooms
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Activate room for scheduling
+     */
+    public function activate(): void
+    {
+        $this->update(['is_active' => true]);
+    }
+
+    /**
+     * Deactivate room from scheduling
+     */
+    public function deactivate(): void
+    {
+        $this->update(['is_active' => false]);
     }
 }

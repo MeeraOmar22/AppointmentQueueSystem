@@ -12,54 +12,47 @@ class InitialDataSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Seed Services
-        Service::insert([
-            [
-                'service_name' => 'Dental Checkup',
-                'estimated_duration' => 30,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'service_name' => 'Scaling & Polishing',
-                'estimated_duration' => 45,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'service_name' => 'Tooth Extraction',
-                'estimated_duration' => 60,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // Idempotent: Skip if data already exists
+        if (OperatingHour::count() > 0) {
+            return;
+        }
 
-        // 2. Seed Dentists
-        Dentist::insert([
-            [
-                'dentist_name' => 'Dr. Aisyah',
+        // 1. Seed Services (using ServiceSeeder now)
+        // Kept for backward compatibility but mostly handled by ServiceSeeder
+        if (Service::count() === 0) {
+            Service::create([
+                'name' => 'Dental Checkup',
+                'estimated_duration' => 30,
+                'duration_minutes' => 30,
+                'price' => 50,
+                'description' => 'Routine dental checkup',
                 'status' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'dentist_name' => 'Dr. Farhan',
-                'status' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+            ]);
+        }
+
+        // 2. Seed Dentists (using DentistSeeder now)
+        // Kept for backward compatibility but mostly handled by DentistSeeder
+        if (Dentist::count() === 0) {
+            Dentist::create([
+                'name' => 'Dr. Aisyah',
+                'specialization' => 'General Dentistry',
+                'status' => true,
+            ]);
+        }
 
         // 3. Seed Operating Hours (Mon–Fri)
+        // Using proper mutator via create() instead of insert()
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        $hours = [];
         foreach ($days as $day) {
-            $hours[] = [
-                'day_of_week' => $day,
-                'start_time' => '09:00:00',
-                'end_time'   => '17:00:00',
-            ];
+            // Check if already exists (idempotent)
+            if (!OperatingHour::where('day_of_week', $day)->exists()) {
+                OperatingHour::create([
+                    'day_of_week' => $day,
+                    'start_time' => '09:00:00',
+                    'end_time' => '23:00:00', // Updated to 11 PM
+                ]);
+            }
         }
-        OperatingHour::insert($hours);
     }
 }
+

@@ -28,6 +28,8 @@
     <!-- Template Stylesheet -->
     <link href="{{ asset('pergigianhelmy/css/style.css') }}?v={{ time() }}" rel="stylesheet">
 
+    @yield('css')
+    
     @stack('styles')
 </head>
 

@@ -32,12 +32,17 @@ class HomeController extends Controller
             ]);
         }
 
-        // Redirect developers and admins to developer dashboard
-        if (auth()->check() && in_array(auth()->user()->role, ['developer', 'admin'])) {
+        // Redirect developers to developer dashboard
+        if (auth()->check() && auth()->user()->role === 'developer') {
             return redirect('/developer/dashboard');
         }
 
-        // Redirect staff to appointments (only if they have staff role)
+        // Redirect admins to admin system config
+        if (auth()->check() && auth()->user()->role === 'admin') {
+            return redirect('/staff/system-config');
+        }
+
+        // Redirect staff to appointments
         if (auth()->check() && auth()->user()->role === 'staff') {
             return redirect('/staff/appointments');
         }

@@ -60,6 +60,20 @@ class ServiceController extends Controller
         $service = Service::findOrFail($id);
         $oldValues = $service->toArray();
 
+        // For AJAX requests with only status, allow partial update
+        if ($request->expectsJson() && $request->has('status') && !$request->has('name')) {
+            $data = $request->validate([
+                'status' => 'required|boolean',
+            ]);
+            
+            $service->update($data);
+            
+            ActivityLogger::log('updated', 'Service', $service->id, "Updated service status: {$service->name}", $oldValues, $service->fresh()->only(['status']));
+            
+            return response()->json(['message' => 'Service updated successfully.']);
+        }
+
+        // Full update validation
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -88,6 +102,10 @@ class ServiceController extends Controller
         $service->update($data);
 
         ActivityLogger::log('updated', 'Service', $service->id, "Updated service: {$service->name}", $oldValues, $service->fresh()->toArray());
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Service updated successfully.']);
+        }
 
         return redirect('/staff/services')->with('success', 'Service updated successfully.');
     }
@@ -138,4 +156,26 @@ class ServiceController extends Controller
 
         return redirect('/staff/services')->with($messages);
     }
+
+    /**
+     * Get services statistics (API endpoint)
+     */
+    public function stats()
+    {
+        $services = Service::all();
+
+        return response()->json([
+            'data' => $services->map(function (Service $service) {
+                return [
+                    'id' => $service->id,
+                    'name' => $service->name,
+                    'description' => $service->description,
+                    'price' => $service->price,
+                    'duration' => $service->duration_minutes,
+                    'status' => $service->status ?? 1,
+                ];
+            }),
+        ]);
+    }
 }
+

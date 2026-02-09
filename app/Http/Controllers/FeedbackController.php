@@ -14,13 +14,17 @@ class FeedbackController extends Controller
      */
     public function create(Request $request)
     {
-        $visitCode = $request->query('code');
+        // Accept both 'token' (new standardized) and 'code' (backward compatibility)
+        $visitToken = $request->query('token') ?? $request->query('code');
         
-        if (!$visitCode) {
+        if (!$visitToken) {
             return redirect('/')->with('error', 'Invalid feedback link. Please contact the clinic.');
         }
 
-        $appointment = Appointment::where('visit_code', $visitCode)->first();
+        // Try to find by visit_token first, then by visit_code for backward compatibility
+        $appointment = Appointment::where('visit_token', $visitToken)
+            ->orWhere('visit_code', $visitToken)
+            ->first();
 
         if (!$appointment) {
             return redirect('/')->with('error', 'Appointment not found.');

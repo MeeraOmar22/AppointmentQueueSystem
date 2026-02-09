@@ -53,9 +53,14 @@
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Appointment History</h5>
-            <a href="{{ route('patient.reports.export-records') }}" class="btn btn-sm btn-light">
-                <i class="fas fa-download me-2"></i>Export Records
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ route('patient.reports.export-records') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-download me-2"></i>Export CSV
+                </a>
+                <a href="{{ route('patient.reports.export-pdf') }}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-file-pdf me-2"></i>Export PDF
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -80,14 +85,14 @@
                                 <td>{{ $appointment->service->name ?? 'N/A' }}</td>
                                 <td>{{ $appointment->dentist->name ?? 'N/A' }}</td>
                                 <td>
-                                    @if($appointment->status === 'completed')
+                                    @if($appointment->status->value === 'completed')
                                         <span class="badge bg-success">Completed</span>
-                                    @elseif($appointment->status === 'cancelled')
+                                    @elseif($appointment->status->value === 'cancelled')
                                         <span class="badge bg-danger">Cancelled</span>
-                                    @elseif($appointment->status === 'no_show')
+                                    @elseif($appointment->status->value === 'no_show')
                                         <span class="badge bg-warning text-dark">No Show</span>
                                     @else
-                                        <span class="badge bg-info">{{ ucfirst($appointment->status) }}</span>
+                                        <span class="badge bg-info">{{ ucfirst($appointment->status->value) }}</span>
                                     @endif
                                 </td>
                                 <td>

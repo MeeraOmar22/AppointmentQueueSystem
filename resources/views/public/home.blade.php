@@ -14,110 +14,50 @@
                         <h5 class="text-white text-uppercase mb-3 animated slideInDown">Keep Your Teeth Healthy</h5>
                         <h1 class="display-1 text-white mb-md-4 animated zoomIn">Take The Best Quality Dental Treatment</h1>
                         
-                        <!-- Quick Actions Cards Inside Carousel -->
-                        <div class="row g-4 justify-content-center mt-5" style="max-width: 1000px; margin: 0 auto;">
+                        <!-- Quick Actions Cards Inside Carousel - 3 Clear Actions -->
+                        <div class="row g-4 justify-content-center mt-5" style="max-width: 1200px; margin: 0 auto;">
                             <!-- Book Appointment Card -->
-                            <div class="col-lg-5 col-md-6">
+                            <div class="col-lg-4 col-md-6">
                                 <a href="{{ url('/book') }}" class="text-decoration-none">
-                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 20px; transition: all 0.4s ease;">
-                                        <!-- Gradient Background Accent -->
-                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, rgba(6, 163, 218, 0.05) 0%, rgba(6, 163, 218, 0.02) 100%);"></div>
-                                        
-                                        <!-- Decorative Background Icon -->
-                                        <div class="position-absolute" style="top: -20px; right: -20px; opacity: 0.08;">
-                                            <i class="bi bi-calendar-heart" style="font-size: 180px; color: #06A3DA;"></i>
-                                        </div>
-
-                                        <div class="card-body p-4 position-relative d-flex flex-column">
-                                            <!-- Icon Badge -->
-                                            <div class="d-inline-flex align-items-center justify-content-center mb-4 position-relative" style="width: 80px; height: 80px;">
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #06A3DA 0%, #0584b7 100%); opacity: 0.1;"></div>
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #06A3DA 0%, #0584b7 100%); opacity: 0.2; transform: scale(0.8);"></div>
-                                                <i class="bi bi-calendar-plus" style="font-size: 42px; color: #06A3DA; position: relative; z-index: 1;"></i>
-                                            </div>
-
-                                            <!-- Content -->
-                                            <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem;">Book Appointment</h3>
-                                            <p class="text-muted mb-4" style="line-height: 1.7; font-size: 0.95rem;">
-                                                Schedule your visit online in minutes. Select your preferred date, time, dentist, and service.
-                                            </p>
-
-                                            <!-- Features List -->
-                                            <ul class="list-unstyled mb-4">
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">Choose preferred dentist</small>
-                                                </li>
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">Instant confirmation</small>
-                                                </li>
-                                                <li>
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">24/7 online booking</small>
-                                                </li>
-                                            </ul>
-
-                                            <!-- Action Button -->
-                                            <div class="d-flex align-items-center justify-content-between mt-auto pt-3" style="border-top: 1px solid rgba(0,0,0,0.05);">
-                                                <span class="text-primary fw-bold" style="font-size: 1.05rem;">Book Now</span>
-                                                <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary" style="width: 40px; height: 40px;">
-                                                    <i class="bi bi-arrow-right text-white" style="font-size: 1.2rem;"></i>
-                                                </div>
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-calendar-plus text-primary mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">Book Appointment</h3>
+                                            <p class="text-muted small mb-3">Schedule your visit online in minutes</p>
+                                            <div class="mt-auto">
+                                                <span class="text-primary fw-bold">Get Started →</span>
                                             </div>
                                         </div>
                                     </div>
                                 </a>
                             </div>
 
-                            <!-- Find My Booking Card -->
-                            <div class="col-lg-5 col-md-6">
-                                <a href="{{ url('/find-my-booking') }}" class="text-decoration-none">
-                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 20px; transition: all 0.4s ease;">
-                                        <!-- Gradient Background Accent -->
-                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.02) 100%);"></div>
-                                        
-                                        <!-- Decorative Background Icon -->
-                                        <div class="position-absolute" style="top: -20px; right: -20px; opacity: 0.08;">
-                                            <i class="bi bi-search" style="font-size: 180px; color: #28a745;"></i>
-                                        </div>
-
-                                        <div class="card-body p-4 position-relative d-flex flex-column">
-                                            <!-- Icon Badge -->
-                                            <div class="d-inline-flex align-items-center justify-content-center mb-4 position-relative" style="width: 80px; height: 80px;">
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); opacity: 0.1;"></div>
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); opacity: 0.2; transform: scale(0.8);"></div>
-                                                <i class="bi bi-search" style="font-size: 42px; color: #28a745; position: relative; z-index: 1;"></i>
+                            <!-- Track Visit Card -->
+                            <div class="col-lg-4 col-md-6">
+                                <a href="{{ url('/track') }}" class="text-decoration-none">
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-clipboard-check text-success mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">Track My Visit</h3>
+                                            <p class="text-muted small mb-3">Check your appointment status in real-time</p>
+                                            <div class="mt-auto">
+                                                <span class="text-success fw-bold">Track Now →</span>
                                             </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
 
-                                            <!-- Content -->
-                                            <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem;">Find My Booking</h3>
-                                            <p class="text-muted mb-4" style="line-height: 1.7; font-size: 0.95rem;">
-                                                Quickly locate your appointment details using your phone number. Track and manage your booking.
-                                            </p>
-
-                                            <!-- Features List -->
-                                            <ul class="list-unstyled mb-4">
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Search by phone number</small>
-                                                </li>
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Real-time queue tracking</small>
-                                                </li>
-                                                <li>
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Check-in online</small>
-                                                </li>
-                                            </ul>
-
-                                            <!-- Action Button -->
-                                            <div class="d-flex align-items-center justify-content-between mt-auto pt-3" style="border-top: 1px solid rgba(0,0,0,0.05);">
-                                                <span class="text-success fw-bold" style="font-size: 1.05rem;">Find Now</span>
-                                                <div class="d-flex align-items-center justify-content-center rounded-circle bg-success" style="width: 40px; height: 40px;">
-                                                    <i class="bi bi-arrow-right text-white" style="font-size: 1.2rem;"></i>
-                                                </div>
+                            <!-- Queue Board Card -->
+                            <div class="col-lg-4 col-md-6">
+                                <a href="{{ url('/queue-board') }}" class="text-decoration-none">
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-diagram-3 text-warning mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">View Queue</h3>
+                                            <p class="text-muted small mb-3">See who's being served right now</p>
+                                            <div class="mt-auto">
+                                                <span class="text-warning fw-bold">View Queue →</span>
                                             </div>
                                         </div>
                                     </div>
@@ -134,110 +74,50 @@
                         <h5 class="text-white text-uppercase mb-3 animated slideInDown">Keep Your Teeth Healthy</h5>
                         <h1 class="display-1 text-white mb-md-4 animated zoomIn">Take The Best Quality Dental Treatment</h1>
                         
-                        <!-- Quick Actions Cards Inside Carousel -->
-                        <div class="row g-4 justify-content-center mt-5" style="max-width: 1000px; margin: 0 auto;">
+                        <!-- Quick Actions Cards Inside Carousel - 3 Clear Actions -->
+                        <div class="row g-4 justify-content-center mt-5" style="max-width: 1200px; margin: 0 auto;">
                             <!-- Book Appointment Card -->
-                            <div class="col-lg-5 col-md-6">
+                            <div class="col-lg-4 col-md-6">
                                 <a href="{{ url('/book') }}" class="text-decoration-none">
-                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 20px; transition: all 0.4s ease;">
-                                        <!-- Gradient Background Accent -->
-                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, rgba(6, 163, 218, 0.05) 0%, rgba(6, 163, 218, 0.02) 100%);"></div>
-                                        
-                                        <!-- Decorative Background Icon -->
-                                        <div class="position-absolute" style="top: -20px; right: -20px; opacity: 0.08;">
-                                            <i class="bi bi-calendar-heart" style="font-size: 180px; color: #06A3DA;"></i>
-                                        </div>
-
-                                        <div class="card-body p-4 position-relative d-flex flex-column">
-                                            <!-- Icon Badge -->
-                                            <div class="d-inline-flex align-items-center justify-content-center mb-4 position-relative" style="width: 80px; height: 80px;">
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #06A3DA 0%, #0584b7 100%); opacity: 0.1;"></div>
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #06A3DA 0%, #0584b7 100%); opacity: 0.2; transform: scale(0.8);"></div>
-                                                <i class="bi bi-calendar-plus" style="font-size: 42px; color: #06A3DA; position: relative; z-index: 1;"></i>
-                                            </div>
-
-                                            <!-- Content -->
-                                            <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem;">Book Appointment</h3>
-                                            <p class="text-muted mb-4" style="line-height: 1.7; font-size: 0.95rem;">
-                                                Schedule your visit online in minutes. Select your preferred date, time, dentist, and service.
-                                            </p>
-
-                                            <!-- Features List -->
-                                            <ul class="list-unstyled mb-4">
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">Choose preferred dentist</small>
-                                                </li>
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">Instant confirmation</small>
-                                                </li>
-                                                <li>
-                                                    <i class="bi bi-check-circle-fill text-primary me-2"></i>
-                                                    <small class="text-muted">24/7 online booking</small>
-                                                </li>
-                                            </ul>
-
-                                            <!-- Action Button -->
-                                            <div class="d-flex align-items-center justify-content-between mt-auto pt-3" style="border-top: 1px solid rgba(0,0,0,0.05);">
-                                                <span class="text-primary fw-bold" style="font-size: 1.05rem;">Book Now</span>
-                                                <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary" style="width: 40px; height: 40px;">
-                                                    <i class="bi bi-arrow-right text-white" style="font-size: 1.2rem;"></i>
-                                                </div>
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-calendar-plus text-primary mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">Book Appointment</h3>
+                                            <p class="text-muted small mb-3">Schedule your visit online in minutes</p>
+                                            <div class="mt-auto">
+                                                <span class="text-primary fw-bold">Get Started →</span>
                                             </div>
                                         </div>
                                     </div>
                                 </a>
                             </div>
 
-                            <!-- Find My Booking Card -->
-                            <div class="col-lg-5 col-md-6">
-                                <a href="{{ url('/find-my-booking') }}" class="text-decoration-none">
-                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 20px; transition: all 0.4s ease;">
-                                        <!-- Gradient Background Accent -->
-                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(40, 167, 69, 0.02) 100%);"></div>
-                                        
-                                        <!-- Decorative Background Icon -->
-                                        <div class="position-absolute" style="top: -20px; right: -20px; opacity: 0.08;">
-                                            <i class="bi bi-search" style="font-size: 180px; color: #28a745;"></i>
-                                        </div>
-
-                                        <div class="card-body p-4 position-relative d-flex flex-column">
-                                            <!-- Icon Badge -->
-                                            <div class="d-inline-flex align-items-center justify-content-center mb-4 position-relative" style="width: 80px; height: 80px;">
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); opacity: 0.1;"></div>
-                                                <div class="position-absolute w-100 h-100 rounded-circle" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); opacity: 0.2; transform: scale(0.8);"></div>
-                                                <i class="bi bi-search" style="font-size: 42px; color: #28a745; position: relative; z-index: 1;"></i>
+                            <!-- Track Visit Card -->
+                            <div class="col-lg-4 col-md-6">
+                                <a href="{{ url('/track') }}" class="text-decoration-none">
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-clipboard-check text-success mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">Track My Visit</h3>
+                                            <p class="text-muted small mb-3">Check your appointment status in real-time</p>
+                                            <div class="mt-auto">
+                                                <span class="text-success fw-bold">Track Now →</span>
                                             </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
 
-                                            <!-- Content -->
-                                            <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.5rem;">Find My Booking</h3>
-                                            <p class="text-muted mb-4" style="line-height: 1.7; font-size: 0.95rem;">
-                                                Quickly locate your appointment details using your phone number. Track and manage your booking.
-                                            </p>
-
-                                            <!-- Features List -->
-                                            <ul class="list-unstyled mb-4">
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Search by phone number</small>
-                                                </li>
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Real-time queue tracking</small>
-                                                </li>
-                                                <li>
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    <small class="text-muted">Check-in online</small>
-                                                </li>
-                                            </ul>
-
-                                            <!-- Action Button -->
-                                            <div class="d-flex align-items-center justify-content-between mt-auto pt-3" style="border-top: 1px solid rgba(0,0,0,0.05);">
-                                                <span class="text-success fw-bold" style="font-size: 1.05rem;">Find Now</span>
-                                                <div class="d-flex align-items-center justify-content-center rounded-circle bg-success" style="width: 40px; height: 40px;">
-                                                    <i class="bi bi-arrow-right text-white" style="font-size: 1.2rem;"></i>
-                                                </div>
+                            <!-- Queue Board Card -->
+                            <div class="col-lg-4 col-md-6">
+                                <a href="{{ url('/queue-board') }}" class="text-decoration-none">
+                                    <div class="card border-0 h-100 shadow-lg position-relative overflow-hidden action-card" style="border-radius: 15px; transition: all 0.3s ease;">
+                                        <div class="card-body p-4 position-relative d-flex flex-column text-center">
+                                            <i class="bi bi-diagram-3 text-warning mb-3" style="font-size: 48px;"></i>
+                                            <h3 class="fw-bold mb-2 text-dark">View Queue</h3>
+                                            <p class="text-muted small mb-3">See who's being served right now</p>
+                                            <div class="mt-auto">
+                                                <span class="text-warning fw-bold">View Queue →</span>
                                             </div>
                                         </div>
                                     </div>

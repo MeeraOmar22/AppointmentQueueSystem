@@ -121,7 +121,7 @@ class LateNoShowService
                 if ($action === 'reassign') {
                     // Try to reassign to another dentist
                     $newDentist = \App\Models\Dentist::where('id', '!=', $dentistId)
-                        ->where('status', 'available')
+                        ->where('status', true)
                         ->first();
 
                     if ($newDentist) {

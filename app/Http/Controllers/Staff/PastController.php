@@ -3,15 +3,17 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
 use App\Models\Dentist;
 use App\Models\User;
+use App\Models\Service;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 
 class PastController extends Controller
 {
     /**
-     * Display past (deleted) dentists and staff
+     * Display past (deleted) dentists, staff, services, and appointments
      */
     public function index()
     {
@@ -24,7 +26,16 @@ class PastController extends Controller
             ->orderBy('deleted_at', 'desc')
             ->get();
 
-        return view('staff.past', compact('pastDentists', 'pastStaff'));
+        $pastServices = Service::onlyTrashed()
+            ->orderBy('deleted_at', 'desc')
+            ->get();
+
+        $pastAppointments = Appointment::onlyTrashed()
+            ->with('dentist', 'service')
+            ->orderBy('deleted_at', 'desc')
+            ->get();
+
+        return view('staff.past', compact('pastDentists', 'pastStaff', 'pastServices', 'pastAppointments'));
     }
 
     /**
@@ -123,5 +134,95 @@ class PastController extends Controller
         $user->forceDelete();
 
         return back()->with('success', "Staff '{$name}' permanently deleted");
+    }
+
+    /**
+     * Restore a deleted service
+     */
+    public function restoreService($id)
+    {
+        $service = Service::onlyTrashed()->findOrFail($id);
+        $name = $service->name;
+
+        $service->restore();
+
+        ActivityLogger::log(
+            'restored',
+            'Service',
+            $id,
+            "Restored service: {$name}",
+            $service->toArray(),
+            null
+        );
+
+        return back()->with('success', "Service '{$name}' restored successfully");
+    }
+
+    /**
+     * Permanently delete a deleted service
+     */
+    public function forceDeleteService($id)
+    {
+        $service = Service::onlyTrashed()->findOrFail($id);
+        $name = $service->name;
+
+        ActivityLogger::log(
+            'permanently_deleted',
+            'Service',
+            $id,
+            "Permanently deleted service: {$name}",
+            $service->toArray(),
+            null
+        );
+
+        $service->forceDelete();
+
+        return back()->with('success', "Service '{$name}' permanently deleted");
+    }
+
+    /**
+     * Restore a deleted appointment
+     */
+    public function restoreAppointment($id)
+    {
+        $appointment = Appointment::onlyTrashed()->findOrFail($id);
+        $patientName = $appointment->patient_name;
+        $appointmentDate = $appointment->appointment_date->format('d M Y');
+
+        $appointment->restore();
+
+        ActivityLogger::log(
+            'restored',
+            'Appointment',
+            $id,
+            "Restored appointment for {$patientName} on {$appointmentDate}",
+            $appointment->toArray(),
+            null
+        );
+
+        return back()->with('success', "Appointment for '{$patientName}' restored successfully");
+    }
+
+    /**
+     * Permanently delete a deleted appointment
+     */
+    public function forceDeleteAppointment($id)
+    {
+        $appointment = Appointment::onlyTrashed()->findOrFail($id);
+        $patientName = $appointment->patient_name;
+        $appointmentDate = $appointment->appointment_date->format('d M Y');
+
+        ActivityLogger::log(
+            'permanently_deleted',
+            'Appointment',
+            $id,
+            "Permanently deleted appointment for {$patientName} on {$appointmentDate}",
+            $appointment->toArray(),
+            null
+        );
+
+        $appointment->forceDelete();
+
+        return back()->with('success', "Appointment for '{$patientName}' permanently deleted");
     }
 }

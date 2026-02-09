@@ -19,14 +19,45 @@ class Queue extends Model
         'check_in_time' => 'datetime',
     ];
 
+    /**
+     * Prevent duplicate queue entries for same appointment
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            // Check if queue entry already exists for this appointment
+            if (self::where('appointment_id', $model->appointment_id)->exists()) {
+                throw new \Exception("Queue entry already exists for appointment #{$model->appointment_id}");
+            }
+
+            // Ensure appointment exists
+            if (!Appointment::find($model->appointment_id)) {
+                throw new \Exception("Appointment #{$model->appointment_id} not found");
+            }
+        });
+    }
+
     public static function nextNumberForDate($date, bool $returnStart = false): int
     {
-        $max = self::whereHas('appointment', function ($query) use ($date) {
-            $query->whereDate('appointment_date', $date);
-        })->max('queue_number');
-
-        $next = ($max ?? 0) + 1;
-        return $returnStart ? $next : $next;
+        /**
+         * HIGH-007 FIX: Atomic queue number generation with row locking
+         * Previously: max() + 1 not atomic (multiple concurrent calls could get same number)
+         * Now: Uses database lock to ensure only ONE transaction increments at a time
+         */
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($date) {
+            // Lock the queue table to prevent concurrent number generation
+            $max = self::where(function ($query) use ($date) {
+                $query->whereHas('appointment', function ($subQuery) use ($date) {
+                    $subQuery->whereDate('appointment_date', $date);
+                });
+            })
+            ->lockForUpdate()  // ← CRITICAL: Serialize access to queue numbers
+            ->max('queue_number');
+            
+            return ($max ?? 0) + 1;
+        }, 3);
     }
 
     /**

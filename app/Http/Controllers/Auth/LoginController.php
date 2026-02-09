@@ -25,14 +25,21 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/staff/appointments';
+    protected $redirectTo = '/staff/queue';
 
     /**
-     * Redirect all users to staff appointments after login.
+     * Redirect users based on their role after login.
      */
     protected function redirectTo()
     {
-        return '/staff/appointments';
+        $user = auth()->user();
+        
+        if ($user->role === 'developer') {
+            return '/developer/dashboard';
+        }
+        
+        // Both staff and admin redirect to staff queue
+        return '/staff/queue';
     }
 
     /**

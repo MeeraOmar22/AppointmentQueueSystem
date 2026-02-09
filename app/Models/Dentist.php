@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Dentist extends Model
 {
     use SoftDeletes;
+
     protected $fillable = [
         'name',
         'specialization',
@@ -21,6 +22,10 @@ class Dentist extends Model
         'linkedin_url',
         'instagram_url',
         'status'
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     public function appointments()
@@ -52,7 +57,7 @@ class Dentist extends Model
      */
     public function isAvailable(): bool
     {
-        return $this->status === 'available';
+        return (bool) $this->status;
     }
 
     /**
@@ -60,7 +65,7 @@ class Dentist extends Model
      */
     public function markBusy(): void
     {
-        $this->update(['status' => 'busy']);
+        $this->update(['status' => false]);
     }
 
     /**
@@ -68,7 +73,7 @@ class Dentist extends Model
      */
     public function markAvailable(): void
     {
-        $this->update(['status' => 'available']);
+        $this->update(['status' => true]);
     }
 }
 

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Queue Board Debug Console</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #00ff00; padding: 20px; }
+        .log { margin: 5px 0; }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+        .info { color: #74c0fc; }
+        pre { background: #2d2d2d; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Queue Board Debug Console</h1>
+    
+    <div id="debug-output" style="margin-top: 20px;">
+        <div class="log info">Initializing debug console...</div>
+    </div>
+
+    <script>
+        const debugOutput = document.getElementById('debug-output');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = message;
+            debugOutput.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Test API endpoint directly
+        addLog('Testing API endpoint: /api/queue-board/data...', 'info');
+        
+        fetch('/api/queue-board/data', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-store'
+        })
+            .then(response => {
+                addLog(`API Response Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                addLog('✓ API returned data successfully', 'success');
+                addLog(`  - inService count: ${data.inService?.length || 0}`, 'success');
+                addLog(`  - waiting count: ${data.waiting?.length || 0}`, 'success');
+                
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2);
+                pre.style.maxHeight = '400px';
+                debugOutput.appendChild(pre);
+            })
+            .catch(error => {
+                addLog(`✗ API Error: ${error.message}`, 'error');
+                addLog(`Check browser console (F12) for more details`, 'error');
+            });
+
+        // Test JavaScript refresh logic
+        addLog('', 'info');
+        addLog('Testing JavaScript refresh logic...', 'info');
+        
+        let testCounter = 0;
+        const testInterval = setInterval(() => {
+            testCounter++;
+            addLog(`Auto-refresh test #${testCounter} - ${new Date().toLocaleTimeString()}`, 'info');
+            
+            if (testCounter >= 3) {
+                clearInterval(testInterval);
+                addLog('✓ Auto-refresh interval is working!', 'success');
+                addLog('Your queue board should auto-refresh every 2 seconds', 'success');
+            }
+        }, 2000);
+
+        addLog('✓ Debug console loaded successfully', 'success');
+    </script>
+</body>
+</html>

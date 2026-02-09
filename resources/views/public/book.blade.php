@@ -74,7 +74,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ url('/book') }}" novalidate>
+                    <form method="POST" action="{{ url('/book') }}" id="bookingForm" novalidate>
                         @csrf
 
                         <!-- STEP 1: Service Selection -->
@@ -139,27 +139,14 @@
                             </div>
                         </div>
 
-                        <!-- STEP 3: Clinic & Dentist Preference -->
+                        <!-- STEP 3: Dentist Preference (Single-Clinic System) -->
                         <div class="mb-5 pb-4 border-bottom">
                             <h5 class="fw-bold mb-3">
-                                <span class="badge bg-primary me-2">Step 3</span>Clinic & Dentist Preference
+                                <span class="badge bg-primary me-2">Step 3</span>Dentist Preference
                             </h5>
 
-                            <div class="mb-4">
-                                <label for="clinic_location" class="form-label fw-semibold">Select Clinic Location <span class="text-danger">*</span></label>
-                                <select class="form-select @error('clinic_location') is-invalid @enderror" id="clinic_location" name="clinic_location" required>
-                                    <option value="">-- Choose a location --</option>
-                                    <option value="seremban" @selected(old('clinic_location') == 'seremban')>
-                                        Seremban - No. 25A, Tingkat 1, Lorong Sri Mawar 12/2, 70450 Seremban
-                                    </option>
-                                    <option value="kuala_pilah" @selected(old('clinic_location') == 'kuala_pilah')>
-                                        Kuala Pilah - No. 902, Jalan Raja Melewar, 72000 Kuala Pilah
-                                    </option>
-                                </select>
-                                @error('clinic_location')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <!-- Hidden clinic location field - single clinic system -->
+                            <input type="hidden" name="clinic_location" value="seremban">
 
                             <p class="text-muted small mb-3">
                                 <i class="bi bi-lightbulb me-1 text-warning"></i>
@@ -310,7 +297,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle dentist preference toggle
+    // ===== DENTIST PREFERENCE TOGGLE =====
     const dentistAnyRadio = document.getElementById('dentist_any');
     const dentistSpecificRadio = document.getElementById('dentist_specific');
     const dentistSelectWrapper = document.getElementById('dentist_select_wrapper');
@@ -338,6 +325,259 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial visibility check
     updateDentistSelectVisibility();
+
+    // ===== OPERATING HOURS VALIDATION =====
+    const appointmentDateInput = document.getElementById('appointment_date');
+    const appointmentTimeInput = document.getElementById('appointment_time');
+    const clinicLocationSelect = document.getElementById('clinic_location');
+    const timeValidationMsg = document.getElementById('time-validation-msg');
+
+    // Operating hours configuration
+    // Single-clinic system: hardcoded to seremban
+    // clinic_location is now a hidden field, no user selection needed
+    const operatingHours = {
+        'seremban': {
+            'Monday': { start: '09:00', end: '18:00' },
+            'Tuesday': { start: '09:00', end: '18:00' },
+            'Wednesday': { start: '09:00', end: '18:00' },
+            'Thursday': { start: '09:00', end: '18:00' },
+            'Friday': { start: '09:00', end: '18:00' },
+            'Saturday': { start: '10:00', end: '16:00' },
+            'Sunday': null  // Closed
+        }
+    };
+
+    function validateAppointmentTime() {
+        if (!appointmentDateInput.value || !appointmentTimeInput.value) {
+            return; // Don't validate incomplete form
+        }
+
+        const date = new Date(appointmentDateInput.value);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const location = 'seremban'; // Single-clinic system
+        const selectedTime = appointmentTimeInput.value; // HH:MM format
+
+        // Get hours for seremban clinic on selected day
+        const hours = operatingHours[location]?.[dayName];
+
+        let messageHTML = '';
+        let isValid = true;
+
+        if (!hours) {
+            messageHTML = `<strong>⏰ Clinic is CLOSED on ${dayName}</strong>. Please choose another date.`;
+            isValid = false;
+        } else {
+            // Compare times
+            const [selectedHour, selectedMin] = selectedTime.split(':').map(Number);
+            const [startHour, startMin] = hours.start.split(':').map(Number);
+            const [endHour, endMin] = hours.end.split(':').map(Number);
+
+            const selectedTimeInMinutes = selectedHour * 60 + selectedMin;
+            const startTimeInMinutes = startHour * 60 + startMin;
+            const endTimeInMinutes = endHour * 60 + endMin;
+
+            if (selectedTimeInMinutes < startTimeInMinutes) {
+                messageHTML = `<strong>⏰ Too Early!</strong> Clinic opens at ${hours.start}`;
+                isValid = false;
+            } else if (selectedTimeInMinutes >= endTimeInMinutes) {
+                messageHTML = `<strong>⏰ Too Late!</strong> Clinic closes at ${hours.end}`;
+                isValid = false;
+            } else {
+                messageHTML = `<strong class="text-success">✓ Available!</strong> Clinic is open ${hours.start} - ${hours.end}`;
+            }
+        }
+
+        // Show/update validation message
+        let msgElement = document.getElementById('time-validation-msg');
+        if (!msgElement) {
+            msgElement = document.createElement('small');
+            msgElement.id = 'time-validation-msg';
+            msgElement.className = 'd-block mt-2';
+            appointmentTimeInput.parentElement.appendChild(msgElement);
+        }
+
+        msgElement.innerHTML = messageHTML;
+        msgElement.className = 'd-block mt-2 ' + (isValid ? 'text-success' : 'text-danger');
+
+        // Visual feedback
+        if (isValid) {
+            appointmentTimeInput.classList.remove('is-invalid');
+            appointmentTimeInput.classList.add('is-valid');
+        } else {
+            appointmentTimeInput.classList.remove('is-valid');
+            appointmentTimeInput.classList.add('is-invalid');
+        }
+
+        return isValid;
+    }
+
+    // Validate on date or time change
+    if (appointmentDateInput) {
+        appointmentDateInput.addEventListener('change', validateAppointmentTime);
+    }
+    if (appointmentTimeInput) {
+        appointmentTimeInput.addEventListener('change', validateAppointmentTime);
+        appointmentTimeInput.addEventListener('input', validateAppointmentTime);
+    }
+
+    /**
+     * FORM VALIDATION: Check all required fields before submission
+     */
+    function validateBookingForm() {
+        const form = document.getElementById('bookingForm');
+        const patientName = document.getElementById('patient_name');
+        const patientPhone = document.getElementById('patient_phone');
+        const serviceId = document.querySelector('input[name="service_id"]:checked');
+        const appointmentDate = document.getElementById('appointment_date');
+        const appointmentTime = document.getElementById('appointment_time');
+        const dentistPreference = document.querySelector('input[name="dentist_preference"]:checked');
+        const dentistId = document.getElementById('dentist_id');
+
+        let isValid = true;
+        let errorMessages = [];
+
+        // Validate patient name
+        if (!patientName.value || patientName.value.trim() === '') {
+            isValid = false;
+            errorMessages.push('Please fill in your name');
+            patientName.classList.add('is-invalid');
+        } else {
+            patientName.classList.remove('is-invalid');
+        }
+
+        // Validate phone number
+        if (!patientPhone.value || patientPhone.value.trim() === '') {
+            isValid = false;
+            errorMessages.push('Please fill in your phone number');
+            patientPhone.classList.add('is-invalid');
+        } else {
+            patientPhone.classList.remove('is-invalid');
+        }
+
+        // Validate service selection
+        if (!serviceId) {
+            isValid = false;
+            errorMessages.push('Please select a service');
+        }
+
+        // Validate appointment date
+        if (!appointmentDate.value) {
+            isValid = false;
+            errorMessages.push('Please select an appointment date');
+            appointmentDate.classList.add('is-invalid');
+        } else {
+            appointmentDate.classList.remove('is-invalid');
+        }
+
+        // Validate appointment time
+        if (!appointmentTime.value) {
+            isValid = false;
+            errorMessages.push('Please select an appointment time');
+            appointmentTime.classList.add('is-invalid');
+        } else {
+            appointmentTime.classList.remove('is-invalid');
+        }
+
+        // Validate dentist preference
+        if (!dentistPreference) {
+            isValid = false;
+            errorMessages.push('Please select a dentist preference');
+        }
+
+        // Validate specific dentist if selected
+        if (dentistPreference && dentistPreference.value === 'specific') {
+            if (!dentistId.value) {
+                isValid = false;
+                errorMessages.push('Please choose a specific dentist');
+                dentistId.classList.add('is-invalid');
+            } else {
+                dentistId.classList.remove('is-invalid');
+            }
+        }
+
+        // Show error alert if validation fails
+        if (!isValid) {
+            // Remove any existing alerts
+            const existingAlert = document.querySelector('.alert-danger:not(.alert-dismissible)');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // Create error alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <strong>⚠️ Please complete the following:</strong>
+                <ul class="mb-0 mt-2">
+                    ${errorMessages.map(msg => `<li>${msg}</li>`).join('')}
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // Insert alert at top of form
+            const form = document.getElementById('bookingForm');
+            form.insertBefore(alertDiv, form.firstChild);
+
+            // Scroll to alert
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        return isValid;
+    }
+
+    // Validate on form submission
+    const bookingForm = document.getElementById('bookingForm');
+    if (bookingForm) {
+        bookingForm.addEventListener('submit', function(e) {
+            // Check all required fields first
+            if (!validateBookingForm()) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Then check appointment time validation
+            if (!validateAppointmentTime()) {
+                e.preventDefault();
+                appointmentTimeInput.focus();
+                appointmentTimeInput.classList.add('is-invalid');
+                return false;
+            }
+        });
+    }
+
+    // Real-time validation: Remove error styling when user starts typing
+    const requiredFields = [
+        document.getElementById('patient_name'),
+        document.getElementById('patient_phone'),
+        document.getElementById('appointment_date'),
+        document.getElementById('appointment_time'),
+        document.getElementById('dentist_id')
+    ];
+
+    requiredFields.forEach(field => {
+        if (field) {
+            field.addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    this.classList.remove('is-invalid');
+                }
+            });
+            field.addEventListener('change', function() {
+                if (this.value.trim() !== '') {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+    });
+
+    // Validate on date or time change
+    if (appointmentDateInput) {
+        appointmentDateInput.addEventListener('change', validateAppointmentTime);
+    }
+    if (appointmentTimeInput) {
+        appointmentTimeInput.addEventListener('change', validateAppointmentTime);
+        appointmentTimeInput.addEventListener('input', validateAppointmentTime);
+    }
 });
 </script>
 

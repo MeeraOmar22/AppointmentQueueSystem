@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Live Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .section { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Queue Board API Live Test</h1>
+    
+    <div id="status" class="section">
+        <h3>Fetching API...</h3>
+    </div>
+
+    <div id="results" class="section" style="display:none;">
+        <h3>API Results</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Queue #</th>
+                    <th>Patient</th>
+                    <th>Status</th>
+                    <th>Room</th>
+                    <th>Dentist</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const tableBody = document.getElementById('tableBody');
+
+        fetch('/api/queue-board/data', {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        })
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            status.innerHTML = `<p class="success">✓ API returned successfully!</p>`;
+            
+            // Show in-service
+            if (data.inService && data.inService.length > 0) {
+                tableBody.innerHTML += `<tr><td colspan="5" style="background:#ffe0e0; font-weight:bold;">IN SERVICE</td></tr>`;
+                data.inService.forEach(q => {
+                    tableBody.innerHTML += `<tr>
+                        <td>A-${String(q.queue_number).padStart(2, '0')}</td>
+                        <td>${q.appointment?.patient_name || '?'}</td>
+                        <td>${q.queue_status}</td>
+                        <td>${q.room?.room_number || '❌ MISSING'}</td>
+                        <td>${q.dentist?.name || '❌ MISSING'}</td>
+                    </tr>`;
+                });
+            }
+            
+            // Show waiting
+            if (data.waiting && data.waiting.length > 0) {
+                tableBody.innerHTML += `<tr><td colspan="5" style="background:#e0e0ff; font-weight:bold;">WAITING</td></tr>`;
+                data.waiting.forEach(q => {
+                    tableBody.innerHTML += `<tr>
+                        <td>A-${String(q.queue_number).padStart(2, '0')}</td>
+                        <td>${q.appointment?.patient_name || '?'}</td>
+                        <td>${q.queue_status}</td>
+                        <td>${q.room?.room_number || '—'}</td>
+                        <td>${q.dentist?.name || '?'}</td>
+                    </tr>`;
+                });
+            }
+            
+            results.style.display = 'block';
+        })
+        .catch(e => {
+            status.innerHTML = `<p class="error">✗ Error: ${e.message}</p>`;
+        });
+    </script>
+</body>
+</html>

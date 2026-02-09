@@ -18,6 +18,7 @@ class RoomSeeder extends Seeder
             'capacity' => 1,
             'status' => 'available',
             'clinic_location' => 'seremban',
+            'is_active' => true,
         ]);
 
         Room::create([
@@ -25,6 +26,7 @@ class RoomSeeder extends Seeder
             'capacity' => 1,
             'status' => 'available',
             'clinic_location' => 'seremban',
+            'is_active' => true,
         ]);
 
         // Create rooms for Kuala Pilah clinic
@@ -33,6 +35,7 @@ class RoomSeeder extends Seeder
             'capacity' => 1,
             'status' => 'available',
             'clinic_location' => 'kuala_pilah',
+            'is_active' => true,
         ]);
 
         Room::create([
@@ -40,6 +43,7 @@ class RoomSeeder extends Seeder
             'capacity' => 1,
             'status' => 'available',
             'clinic_location' => 'kuala_pilah',
+            'is_active' => true,
         ]);
     }
 }

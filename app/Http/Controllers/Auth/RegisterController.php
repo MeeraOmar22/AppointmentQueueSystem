@@ -63,10 +63,13 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        // FIXED: Explicitly assign 'patient' role to new registrations
+        // Prevents unauthorized access if database default is wrong
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'role' => 'patient',  // Explicit default for all new registrations
         ]);
     }
 }

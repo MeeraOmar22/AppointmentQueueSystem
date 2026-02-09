@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-In Debugging Guide with Logs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .card h3 {
+            color: #555;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .step {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .step strong {
+            color: #667eea;
+        }
+        
+        .code {
+            background: #282c34;
+            color: #61dafb;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 8px 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .button.secondary {
+            background: #6c757d;
+        }
+        
+        .button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+        
+        .checklist li.done:before {
+            content: "☑";
+            color: #28a745;
+        }
+        
+        .terminal {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 10px 0;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+            border-left: 3px solid #00ff00;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        
+        .timeline-item {
+            padding-left: 40px;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .timeline-item:before {
+            content: "";
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #667eea;
+        }
+        
+        .timeline-item:after {
+            content: "";
+            position: absolute;
+            left: 14px;
+            top: 25px;
+            bottom: -25px;
+            width: 2px;
+            background: #667eea;
+        }
+        
+        .timeline-item:last-child:after {
+            display: none;
+        }
+        
+        .timeline-item strong {
+            color: #667eea;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Check-In Debugging with Backend Logging</h1>
+        
+        <div class="row">
+            <!-- Left Column: Browser-Side Testing -->
+            <div class="card">
+                <h2>🌐 Browser Console Testing</h2>
+                
+                <h3>Step 1: Open Developer Tools</h3>
+                <div class="step">
+                    <strong>Windows/Linux:</strong> Press <code>F12</code><br>
+                    <strong>Mac:</strong> Press <code>Cmd + Option + I</code><br>
+                    Click on the <strong>Console</strong> tab
+                </div>
+                
+                <h3>Step 2: Visit Tracking Page</h3>
+                <div class="step">
+                    Navigate to: <a href="http://127.0.0.1:8000/track/DNT-20260206-001" target="_blank">
+                        http://127.0.0.1:8000/track/DNT-20260206-001
+                    </a>
+                </div>
+                
+                <h3>Step 3: Verify Appointment Details</h3>
+                <div class="step">
+                    You should see:
+                    <ul>
+                        <li>Patient: <strong>Ibrahim Hussain</strong></li>
+                        <li>Service: <strong>Extraction</strong></li>
+                        <li>Time: <strong>3:15 PM</strong></li>
+                        <li>Status: <strong>Booked</strong></li>
+                    </ul>
+                </div>
+                
+                <h3>Step 4: Expected Console Logs</h3>
+                <div class="code">
+// When page loads:
+✅ Tracking data updated: Object {status: 'booked', ...}
+🔘 Check-In button exists: true
+
+// When you click Check-In button:
+🔘 Check-In button clicked
+📝 Form target: http://127.0.0.1:8000/appointment/check-in/DNT-20260206-001
+📤 Preparing to submit form...
+✅ CSRF token found
+📋 Form data being sent: {csrf: "...", action: "..."}
+✅ Allowing form submission to proceed...
+                </div>
+                
+                <h3>Step 5: Take Screenshot</h3>
+                <div class="note">
+                    ⚠️ When you click the Check-In button, take a screenshot of:
+                    <ul>
+                        <li>The console output (left side)</li>
+                        <li>The page (right side)</li>
+                        <li>Any error message that appears</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Right Column: Server-Side Logging -->
+            <div class="card">
+                <h2>💾 Backend Log Monitoring</h2>
+                
+                <h3>Step 1: Start Another Terminal</h3>
+                <div class="step">
+                    Open a new terminal/PowerShell window and navigate to:
+                    <div class="code">cd "c:\Users\User\Desktop\FYP 2\laravel12_bootstrap"</div>
+                </div>
+                
+                <h3>Step 2: Start Log Monitoring</h3>
+                <div class="step">
+                    Run this command to monitor logs in real-time:
+                    <div class="code">php monitor_logs.php</div>
+                    
+                    <br>
+                    You should see:
+                    <div class="code">
+╔════════════════════════════════════════════════════╗
+║    Laravel Log Monitor - Real-Time Updates        ║
+╚════════════════════════════════════════════════════╝
+
+📝 Monitoring: storage/logs/laravel.log
+⏳ Waiting for log entries (press Ctrl+C to stop)...
+═══════════════════════════════════════════════════════
+                    </div>
+                </div>
+                
+                <h3>Step 3: Expected Log Output</h3>
+                <div class="code">
+[timestamp] local.info: 🔘 Check-in request received
+[timestamp] local.info: 📋 Appointment found {id: ..., patient: "Ibrahim Hussain", ...}
+[timestamp] local.info: 📅 Checking appointment date
+[timestamp] local.info: ⏰ Check-in window calculated
+[timestamp] local.info: ⏳ Check-in window not open (too early)
+[timestamp] local.info: ❌ Check-in window closed
+                    </div>
+                </div>
+                
+                <h3>Step 4: Analyze Timestamps</h3>
+                <div class="step">
+                    Check if the logs show:
+                    <ul>
+                        <li>✅ Request received with your code</li>
+                        <li>✅ Appointment found</li>
+                        <li>✅ Date validation passed</li>
+                        <li>✅ Window calculation done</li>
+                        <li>✅ Window validation FAILED (expected at 3 AM)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Full Testing Flow -->
+        <div class="card">
+            <h2>📋 Complete Testing Checklist</h2>
+            
+            <h3>Setup Phase</h3>
+            <ul class="checklist">
+                <li>Clear all caches: <code>php artisan cache:clear ; php artisan view:clear</code></li>
+                <li>Verify appointment exists: Check in database or via browser</li>
+                <li>Start monitoring: <code>php monitor_logs.php</code> in new terminal</li>
+            </ul>
+            
+            <h3>Testing Phase</h3>
+            <ul class="checklist">
+                <li>Open browser console (F12 → Console)</li>
+                <li>Visit http://127.0.0.1:8000/track/DNT-20260206-001</li>
+                <li>Wait for page to fully load (see tracking data)</li>
+                <li>Scroll down to find green "Check In" button</li>
+                <li>Click the "Check In" button</li>
+                <li>Watch console for form submission logs</li>
+                <li>Check backend terminal for detailed logs</li>
+            </ul>
+            
+            <h3>Data Collection Phase</h3>
+            <ul class="checklist">
+                <li>Screenshot: Browser console + page</li>
+                <li>Screenshot: Backend terminal logs</li>
+                <li>Note what message appears on page (if any)</li>
+                <li>Note button status after click (disabled? changed?)</li>
+            </ul>
+        </div>
+        
+        <!-- Expected Behavior -->
+        <div class="card">
+            <h2>✅ Expected Behavior</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>Page Load (3:01 AM)</strong>
+                    <p>Patient sees:</p>
+                    <ul>
+                        <li>Appointment details (3:15 PM)</li>
+                        <li>Status: Booked</li>
+                        <li>Green "Check In" button (enabled)</li>
+                    </ul>
+                </div>
+                
+                <div class="timeline-item">
+                    <strong>Click Check-In Button</strong>
+                    <p>Button click triggers form submission</p>
+                    <div class="code">
+                        POST /appointment/check-in/DNT-20260206-001
+                        Content-Type: application/x-www-form-urlencoded
+                        CSRF-Token: [token]
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <strong>Backend Validation</strong>
+                    <p>Server checks:</p>
+                    <ul>
+                        <li>1. Is appointment today? ✅ Yes (created for today)</li>
+                        <li>2. Is queue paused? ✅ No</li>
+                        <li>3. Is check-in window open? ❌ NO (3 AM, window opens at 2:45 AM)</li>
+                    </ul>
+                    <p>Result: <strong>Error message generated</strong></p>
+                </div>
+                
+                <div class="timeline-item">
+                    <strong>Redirect with Error</strong>
+                    <p>Server sends:</p>
+                    <div class="code">
+                        HTTP 302 Redirect
+                        Location: /track/DNT-20260206-001
+                        Session[error]: "Check-in opens 30 minutes before..."
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <strong>Error Message Display</strong>
+                    <p>Browser shows red alert:</p>
+                    <div class="error">
+                        <strong>✗ Cannot Check In</strong><br>
+                        Check-in opens 30 minutes before your appointment. Your appointment is at 3:15 PM. Please check in after 2:45 PM.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Troubleshooting -->
+        <div class="card">
+            <h2>🔧 Troubleshooting</h2>
+            
+            <h3>❓ If console logs DON'T show "🔘 Check-In button clicked"</h3>
+            <div class="error">
+                Possible causes:
+                <ul>
+                    <li>Form might not have the onsubmit handler</li>
+                    <li>JavaScript file not loaded/updated</li>
+                    <li>View not recompiled after changes</li>
+                </ul>
+                Solutions:
+                <div class="code">
+php artisan view:clear
+php artisan cache:clear
+# Then refresh the browser (Ctrl+F5 for hard refresh)
+                </div>
+            </div>
+            
+            <h3>❓ If backend logs DON'T appear</h3>
+            <div class="error">
+                Possible causes:
+                <ul>
+                    <li>Request never reached the server</li>
+                    <li>Form submission didn't happen</li>
+                    <li>Different appointment code was used</li>
+                </ul>
+                Solutions:
+                <div class="code">
+php artisan tinker
+>>> \App\Models\Appointment::where('visit_code', 'DNT-20260206-001')->first()
+# Verify appointment exists and code is correct
+                </div>
+            </div>
+            
+            <h3>❓ If error message doesn't appear after validation fails</h3>
+            <div class="error">
+                Possible causes:
+                <ul>
+                    <li>Session flash didn't persist</li>
+                    <li>AJAX polling cleared the message</li>
+                    <li>View template not showing alert</li>
+                </ul>
+                Next steps:
+                <ul>
+                    <li>Check if other alerts show (pause alert, success alert)</li>
+                    <li>Look at page source for the alert div</li>
+                    <li>Check if JavaScript is interfering</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="card">
+            <h2>🔗 Quick Links</h2>
+            <p style="margin: 10px 0;">
+                <button class="button" onclick="window.open('http://127.0.0.1:8000/track/DNT-20260206-001', '_blank')">
+                    👁️ Open Tracking Page
+                </button>
+                <button class="button secondary" onclick="window.open('http://127.0.0.1:8000', '_blank')">
+                    🏠 Open Home
+                </button>
+            </p>
+            
+            <h3>Terminal Commands</h3>
+            <div class="code">
+# Clear all caches
+php artisan cache:clear ; php artisan view:clear
+
+# Monitor logs in real-time
+php monitor_logs.php
+
+# View recent logs
+php show_recent_logs.php
+
+# Check appointment in database
+php artisan tinker
+>>> \App\Models\Appointment::where('visit_code', 'DNT-20260206-001')->first()
+            </div>
+        </div>
+    </div>
+</body>
+</html>

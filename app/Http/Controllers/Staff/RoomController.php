@@ -6,29 +6,42 @@ use App\Http\Controllers\Controller;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Services\ActivityLogger;
+use App\Services\RoomManagementService;
+use App\Services\RoomService;
+use App\Services\ExceptionAlertService;
 
 class RoomController extends Controller
 {
+    public function __construct(
+        private RoomManagementService $roomService,
+        private RoomService $roomSvc,
+    ) {
+        // Authorization: Only staff, admin, or developer can manage treatment rooms
+        $this->middleware(function ($request, $next) {
+            if (!in_array(auth()->user()->role, ['staff', 'admin', 'developer'])) {
+                abort(403, 'Unauthorized to manage treatment rooms');
+            }
+            return $next($request);
+        });
+    }
+
     /**
      * Display all rooms for management
-     * Filtered by the clinic location this system is deployed to
+     * Shows rooms with their current status and patient assignments
      */
     public function index()
     {
         $clinicLocation = config('clinic.location', 'seremban');
         
         $rooms = Room::where('clinic_location', $clinicLocation)
+            ->with([
+                'queues' => fn($q) => $q->where('queue_status', 'in_treatment')
+                    ->with(['appointment.service', 'appointment.dentist'])
+            ])
             ->orderBy('room_number')
             ->paginate(50);
 
-        // Statistics
-        $stats = [
-            'total_rooms' => $rooms->total(),
-            'available_rooms' => Room::where('clinic_location', $clinicLocation)->where('status', 'available')->count(),
-            'occupied_rooms' => Room::where('clinic_location', $clinicLocation)->where('status', 'occupied')->count(),
-            'clinic_name' => ucwords(str_replace('_', ' ', $clinicLocation)),
-        ];
+        $stats = $this->roomService->getRoomStatistics($clinicLocation);
 
         return view('staff.rooms.index', [
             'rooms' => $rooms,
@@ -59,40 +72,24 @@ class RoomController extends Controller
         $clinicLocation = config('clinic.location', 'seremban');
         
         $validated = $request->validate([
-            'room_number' => 'required|string|max:50',
+            'room_number' => 'required|string|max:50|unique:rooms,room_number,NULL,id,clinic_location,' . $clinicLocation,
             'capacity' => 'required|integer|min:1|max:10',
+            'is_active' => 'sometimes|boolean',
         ]);
 
-        // Check if room number already exists for this clinic
-        $exists = Room::where('room_number', $validated['room_number'])
-            ->where('clinic_location', $clinicLocation)
-            ->exists();
+        try {
+            $room = $this->roomSvc->createRoom(
+                array_merge($validated, ['is_active' => $request->boolean('is_active', true)]),
+                $clinicLocation
+            );
 
-        if ($exists) {
-            return back()->withInput()->withErrors([
-                'room_number' => 'Room number already exists for this clinic location.',
-            ]);
+            return redirect('/staff/rooms')
+                ->with('success', 'Room created successfully. Room #' . $room->room_number . ' is now available.');
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->withErrors(['room_number' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors(['error' => 'Failed to create room: ' . $e->getMessage()]);
         }
-
-        $room = Room::create([
-            'room_number' => $validated['room_number'],
-            'capacity' => $validated['capacity'],
-            'status' => 'available',
-            'clinic_location' => $clinicLocation,
-        ]);
-
-        // Log activity
-        ActivityLogger::log(
-            'created',
-            'Room',
-            $room->id,
-            'Created new treatment room: ' . $room->room_number,
-            null,
-            $room->toArray()
-        );
-
-        return redirect('/staff/rooms')
-            ->with('success', 'Room created successfully. Room #' . $room->room_number . ' is now available.');
     }
 
     /**
@@ -110,18 +107,66 @@ class RoomController extends Controller
 
     /**
      * Update room
+     * 
+     * FIX #10: Prevent deactivating rooms that have active treatments
+     * Prevents breaking workflow by disabling room mid-treatment
      */
     public function update(Request $request, Room $room)
     {
+        // For AJAX requests with only is_active, allow partial update
+        if ($request->expectsJson() && $request->has('is_active') && !$request->has('room_number')) {
+            $validated = $request->validate([
+                'is_active' => 'required|boolean',
+            ]);
+            
+            // FIX #10: If trying to deactivate, check for active treatments
+            if (!$validated['is_active'] && $room->is_active) {
+                $activePatients = \App\Models\Queue::where('room_id', $room->id)
+                    ->where('queue_status', 'in_treatment')
+                    ->count();
+                
+                if ($activePatients > 0) {
+                    return response()->json([
+                        'error' => "Cannot deactivate {$room->room_number}: Currently treating {$activePatients} patient(s). Room must complete treatment first.",
+                        'active_patients' => $activePatients,
+                    ], 422);
+                }
+            }
+            
+            $oldValues = $room->only(['is_active']);
+            $wasActive = $room->is_active;
+            $room->update($validated);
+            $roomAfter = $room->fresh();
+            
+            ActivityLogger::log(
+                'updated',
+                'Room',
+                $room->id,
+                'Updated room status: ' . $room->room_number,
+                $oldValues,
+                $roomAfter->only(['is_active'])
+            );
+            
+            if ($wasActive && !$roomAfter->is_active) {
+                ExceptionAlertService::roomDisabled($roomAfter, $wasActive);
+            }
+            
+            return response()->json(['message' => 'Room updated successfully.']);
+        }
+        
+        // Full update validation
         $validated = $request->validate([
             'room_number' => 'required|string|max:50',
             'capacity' => 'required|integer|min:1|max:10',
             'status' => 'required|in:available,occupied',
+            'is_active' => 'required|boolean',
         ]);
 
-        $oldValues = $room->only(['room_number', 'capacity', 'status']);
+        $oldValues = $room->only(['room_number', 'capacity', 'status', 'is_active']);
 
+        $wasActive = $room->is_active;
         $room->update($validated);
+        $roomAfter = $room->fresh();
 
         // Log activity
         ActivityLogger::log(
@@ -130,8 +175,16 @@ class RoomController extends Controller
             $room->id,
             'Updated room: ' . $room->room_number,
             $oldValues,
-            $room->fresh()->toArray()
+            $roomAfter->toArray()
         );
+
+        if ($wasActive && !$roomAfter->is_active) {
+            ExceptionAlertService::roomDisabled($roomAfter, $wasActive);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Room updated successfully.']);
+        }
 
         return redirect('/staff/rooms')
             ->with('success', 'Room updated successfully.');
@@ -217,18 +270,13 @@ class RoomController extends Controller
         $rooms = Room::where('clinic_location', $clinicLocation)->get();
 
         return response()->json([
-            'success' => true,
-            'clinic_location' => $clinicLocation,
-            'total' => $rooms->count(),
-            'available' => $rooms->where('status', 'available')->count(),
-            'occupied' => $rooms->where('status', 'occupied')->count(),
-            'rooms' => $rooms->map(function (Room $room) {
+            'data' => $rooms->map(function (Room $room) {
                 return [
                     'id' => $room->id,
-                    'room_number' => $room->room_number,
-                    'status' => $room->status,
+                    'name' => $room->room_number,
+                    'type' => 'Treatment Room',
+                    'status' => $room->is_active ? true : false,
                     'capacity' => $room->capacity,
-                    'current_patient' => $room->currentPatient?->appointment?->patient_name,
                 ];
             }),
         ]);
